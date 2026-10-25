@@ -8,17 +8,13 @@ import com.projectkorra.projectkorra.ability.util.Collision;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
 import com.projectkorra.projectkorra.util.LightManager;
 import com.projectkorra.projectkorra.util.TempBlock;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Particle;
-import org.bukkit.Sound;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Fire;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -86,7 +82,7 @@ public abstract class FireAbility extends ElementalAbility {
 
 	public void createTempFire(final Location loc, final long time) {
 		if(isIgnitable(loc.getBlock())) {
-			new TempBlock(loc.getBlock(), createFireState(loc.getBlock(), getFireType() == Material.SOUL_FIRE), time);
+			new TempBlock(loc.getBlock(), createFireState(loc.getBlock(), getFireType() == Material.SOUL_FIRE, this.getPlayer()), time);
 			SOURCE_PLAYERS.put(loc.getBlock(), this.getPlayer());
 		}
 	}
@@ -148,20 +144,42 @@ public abstract class FireAbility extends ElementalAbility {
 	 * @param blue If its soul fire or not
 	 * @return The fire blockstate
 	 */
-	public static BlockData createFireState(Block position, boolean blue) {
-		Fire fire = (Fire) Material.FIRE.createBlockData();
-		
+	public static BlockData createFireState(Block position, boolean blue, Player sourcePlayer) {
+		List<Integer> activeColors = new ArrayList<>(sourcePlayer.getPersistentDataContainer().getOrDefault(
+			new NamespacedKey("tbmccore","active_fire_colors"),
+				PersistentDataType.LIST.integers(),
+				List.of()
+		));
+		Fire fire = (Fire) getPilotDataFromCode(2);
+		if (!activeColors.isEmpty()) {
+			// get fire data from random list entry
+			Random rand = new Random();
+			int index = rand.nextInt(activeColors.size());
+			int code = activeColors.get(rand.nextInt(activeColors.size()));
+			if (code == 6) {
+				blue = true;
+			} else {
+				fire = (Fire) getPilotDataFromCode(code);
+
+			}
+		}
 		if (isIgnitable(position) && position.getRelative(BlockFace.DOWN).getType().isSolid())
 			return (blue) ? Material.SOUL_FIRE.createBlockData() : fire; //Default fire for when there is a solid block bellow
 
 		for (BlockFace face : IGNITE_FACES) {
-			fire.setFace(face, false);
-			if (isIgnitable(position.getRelative(face))) {
-				fire.setFace(face, true);
-			}
+			fire.setFace(face, isIgnitable(position.getRelative(face).getType()));
 		}
 
 		return fire;
+	}
+
+
+	public static BlockData getPilotDataFromCode(int code) {
+		World world = Bukkit.getWorld("void");
+		int zCoord = 930-code;
+		Block block = world.getBlockAt(901, 61, zCoord);
+		return block.getBlockData();
+
 	}
 
 	public static void dryWetBlocks(final Block block, final CoreAbility ability, boolean playSound) {

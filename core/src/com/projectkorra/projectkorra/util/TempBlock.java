@@ -99,10 +99,6 @@ public class TempBlock {
 		this.attachedTempBlocks = new HashSet<>(0);
 		this.suffocate = ability.isPresent() ? !(ability.get() instanceof WaterAbility) : false;
 
-		//Fire griefing will make the state update on its own, so we don't need to update it ourselves
-		if (!FireAbility.canFireGrief() && (newData.getMaterial() == Material.FIRE || newData.getMaterial() == Material.SOUL_FIRE)) {
-			newData = FireAbility.createFireState(block, newData.getMaterial() == Material.SOUL_FIRE); //Fix the blockstate looking incorrect
-		}
 		if (block.getType() == Material.SNOW){
 			if (newData.getMaterial() == Material.AIR){
 				updateSnowableBlock(block.getRelative(BlockFace.DOWN),false);
