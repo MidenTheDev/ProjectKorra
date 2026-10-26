@@ -82,7 +82,7 @@ public class ConfigManager {
 			config.addDefault("Chat.Colors.FireSub", "dark_red");
 			config.addDefault("Chat.Colors.BlueFire", "#1ac5fd");
 			config.addDefault("Chat.Colors.Combustion", "#690213");
-			config.addDefault("Chat.Colors.Lightning", "#820d0d");
+			config.addDefault("Chat.Colors.Lightning", "31E8E8");
 			config.addDefault("Chat.Colors.Chi", "gold");
 			config.addDefault("Chat.Colors.ChiSub", "yellow");
 			config.addDefault("Chat.Branding.JoinMessage.Enabled", true);
