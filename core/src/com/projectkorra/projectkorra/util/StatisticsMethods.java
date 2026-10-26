@@ -2,7 +2,9 @@ package com.projectkorra.projectkorra.util;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.entity.Player;
 
@@ -166,20 +168,46 @@ public class StatisticsMethods {
 	 * @return The ID associated with the provided key. If invalid statName,
 	 *         return -1.
 	 */
+	private static final Set<String> PENDING_KEYS = ConcurrentHashMap.newKeySet();
+
+	/**
+	 * Reads the ID of a statistic key from the database into the key maps
+	 *
+	 * @return True if the key exists
+	 */
+	private static boolean readKey(final StatisticsManager manager, final String statName) {
+		try (ResultSet rs = DBConnection.sql.readQuery("SELECT * FROM pk_statKeys WHERE statName = ?", statName)) {
+			if (rs.next()) {
+				manager.getKeysByName().put(rs.getString("statName"), rs.getInt("id"));
+				manager.getKeysById().put(rs.getInt("id"), rs.getString("statName"));
+				return true;
+			}
+		} catch (final SQLException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
 	public static int getId(final String statName) {
 		if (!ProjectKorra.isStatisticsEnabled()) {
 			return 0;
 		}
-		if (!Manager.getManager(StatisticsManager.class).getKeysByName().containsKey(statName)) {
-			DBConnection.sql.modifyQuerySync("INSERT INTO pk_statKeys (statName) VALUES (?)", statName);
-			try (ResultSet rs = DBConnection.sql.readQuery("SELECT * FROM pk_statKeys WHERE statName = ?", statName)) {
-				if (rs.next()) {
-					Manager.getManager(StatisticsManager.class).getKeysByName().put(rs.getString("statName"), rs.getInt("id"));
-					Manager.getManager(StatisticsManager.class).getKeysById().put(rs.getInt("id"), rs.getString("statName"));
-				}
-			} catch (final SQLException e) {
-				e.printStackTrace();
+		final StatisticsManager manager = Manager.getManager(StatisticsManager.class);
+		if (!manager.getKeysByName().containsKey(statName)) {
+			// Create the key on the database thread. Until it exists, this returns -1 and the statistic isn't recorded.
+			if (PENDING_KEYS.add(statName)) {
+				DBConnection.sql.runAsync(() -> {
+					try {
+						if (!readKey(manager, statName)) {
+							DBConnection.sql.modifyQuerySync("INSERT INTO pk_statKeys (statName) VALUES (?)", statName);
+							readKey(manager, statName);
+						}
+					} finally {
+						PENDING_KEYS.remove(statName);
+					}
+				});
 			}
+			return -1;
 		}
 		return Manager.getManager(StatisticsManager.class).getKeysByName().containsKey(statName) ? Manager.getManager(StatisticsManager.class).getKeysByName().get(statName) : -1;
 	}

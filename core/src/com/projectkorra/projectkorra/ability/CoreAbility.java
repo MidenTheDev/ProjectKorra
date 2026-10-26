@@ -252,6 +252,8 @@ public abstract class CoreAbility implements Ability {
 	 * that has been started and has not been removed.
 	 */
 	public static void progressAll() {
+		// Creating and calling an event for every ability every tick adds up, so skip it when nothing listens
+		final boolean callProgressEvent = AbilityProgressEvent.getHandlerList().getRegisteredListeners().length > 0;
 		for (final Set<CoreAbility> setAbils : INSTANCES_BY_CLASS.values()) {
 			for (final CoreAbility abil : setAbils) {
 				if (abil instanceof PassiveAbility) {
@@ -283,7 +285,9 @@ public abstract class CoreAbility implements Ability {
 						abil.progress();
 					//}
 
-					Bukkit.getServer().getPluginManager().callEvent(new AbilityProgressEvent(abil));
+					if (callProgressEvent) {
+						Bukkit.getServer().getPluginManager().callEvent(new AbilityProgressEvent(abil));
+					}
 				} catch (final Exception e) {
 					e.printStackTrace();
 					Bukkit.getLogger().severe(abil.toString());

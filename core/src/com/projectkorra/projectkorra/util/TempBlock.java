@@ -33,19 +33,9 @@ import org.bukkit.scheduler.BukkitRunnable;
 import com.projectkorra.projectkorra.GeneralMethods;
 import com.projectkorra.projectkorra.ProjectKorra;
 
-import io.papermc.lib.PaperLib;
 
 public class TempBlock {
 
-	private static boolean USE_PAPERLIB;
-
-	static {
-		try {
-			USE_PAPERLIB = Class.forName("io.papermc.lib.PaperLib") != null;
-		} catch (final Exception e) {
-			USE_PAPERLIB = false;
-		}
-	}
 
 	private static final Map<Block, LinkedList<TempBlock>> instances_ = new HashMap<>();
 	/**
@@ -343,23 +333,12 @@ public class TempBlock {
 	private void trueRevertBlock(boolean removeFromQueue) {
 		this.reverted = true;
 		if (instances_.containsKey(this.block)) {
-			if (USE_PAPERLIB) {
-				PaperLib.getChunkAtAsync(this.block.getLocation()).thenAccept(result -> {
-					TempBlock last = instances_.get(this.block).getLast();
-					this.block.setBlockData(last.newData); //Set the block to the next in line TempBlock
-				});
-			} else {
-				this.block.getChunk().load();
+			this.block.getWorld().getChunkAtAsync(this.block).thenAccept(result -> {
 				TempBlock last = instances_.get(this.block).getLast();
 				this.block.setBlockData(last.newData); //Set the block to the next in line TempBlock
-			}
+			});
 		} else { //Set to the original blockstate
-			if (USE_PAPERLIB) {
-				PaperLib.getChunkAtAsync(this.block.getLocation()).thenAccept(result -> revertState());
-			} else {
-				this.block.getChunk().load();
-				revertState();
-			}
+			this.block.getWorld().getChunkAtAsync(this.block).thenAccept(result -> revertState());
 		}
 
 		if (removeFromQueue) { //Remove from the queue if it's in there. We only do this when required because it is an intensive action due to the collection type

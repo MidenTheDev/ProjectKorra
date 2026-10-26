@@ -5,9 +5,9 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.entity.Player;
 
@@ -24,20 +24,20 @@ public class StatisticsManager extends Manager implements Runnable {
 	 * HashMap which contains all current statistic values (Map<player,
 	 * Map<statId, statValue>>)
 	 */
-	private final Map<UUID, Map<Integer, Long>> STATISTICS = new HashMap<>();
+	private final Map<UUID, Map<Integer, Long>> STATISTICS = new ConcurrentHashMap<>();
 	/**
 	 * HashMap which contains all statistic delta values (Map<player,
 	 * Map<statId, statValue>>)
 	 */
-	private final Map<UUID, Map<Integer, Long>> DELTA = new HashMap<>();
+	private final Map<UUID, Map<Integer, Long>> DELTA = new ConcurrentHashMap<>();
 	/**
 	 * HashMap which contains all statistic names by ID.
 	 */
-	private final Map<String, Integer> KEYS_BY_NAME = new HashMap<>();
+	private final Map<String, Integer> KEYS_BY_NAME = new ConcurrentHashMap<>();
 	/**
 	 * HashMap which contains all statistic IDs by name.
 	 */
-	private final Map<Integer, String> KEYS_BY_ID = new HashMap<>();
+	private final Map<Integer, String> KEYS_BY_ID = new ConcurrentHashMap<>();
 	/**
 	 * HashMap which contains all UUIDs of players who have recently logged out
 	 * to have their stats saved.
@@ -49,7 +49,7 @@ public class StatisticsManager extends Manager implements Runnable {
 
 	@Override
 	public void onActivate() {
-		if (!ProjectKorra.isStatisticsEnabled()) {
+		if (ProjectKorra.isStatisticsEnabled()) {
 			ProjectKorra.plugin.getServer().getScheduler().scheduleSyncRepeatingTask(ProjectKorra.plugin, this, 20 * this.INTERVAL, 20 * this.INTERVAL);
 		}
 		this.setupStatistics();
@@ -79,25 +79,28 @@ public class StatisticsManager extends Manager implements Runnable {
 			DBConnection.sql.modifyQuerySync(query);
 		}
 		// Insert all abilities into pk_statKeys for all statistics.
+		this.loadKeys();
+		boolean inserted = false;
 		for (final CoreAbility ability : CoreAbility.getAbilitiesByName()) {
 			if (ability.isHarmlessAbility()) {
 				continue;
 			}
 			for (final Statistic statistic : Statistic.values()) {
 				final String statName = statistic.getStatisticName(ability);
-				final ResultSet rs = DBConnection.sql.readQuery("SELECT * FROM pk_statKeys WHERE statName = ?", statName);
-				try {
-					if (!rs.next()) {
-						DBConnection.sql.modifyQuerySync("INSERT INTO pk_statKeys (statName) VALUES (?)", statName);
-					}
-				} catch (final SQLException e) {
-					e.printStackTrace();
+				if (!this.KEYS_BY_NAME.containsKey(statName)) {
+					DBConnection.sql.modifyQuerySync("INSERT INTO pk_statKeys (statName) VALUES (?)", statName);
+					inserted = true;
 				}
 			}
 		}
 		// Populate Keys Map with all loaded statName(s) in pk_statKeys.
-		final ResultSet rs = DBConnection.sql.readQuery("SELECT * FROM pk_statKeys");
-		try {
+		if (inserted) {
+			this.loadKeys();
+		}
+	}
+
+	private void loadKeys() {
+		try (ResultSet rs = DBConnection.sql.readQuery("SELECT * FROM pk_statKeys")) {
 			while (rs.next()) {
 				this.KEYS_BY_NAME.put(rs.getString("statName"), rs.getInt("id"));
 				this.KEYS_BY_ID.put(rs.getInt("id"), rs.getString("statName"));
@@ -107,44 +110,63 @@ public class StatisticsManager extends Manager implements Runnable {
 		}
 	}
 
+	/**
+	 * Loads a player's statistics from the database on the database thread. Statistics gained before the load
+	 * finishes are kept and added to the loaded values.
+	 *
+	 * @param uuid The player
+	 */
 	public void load(final UUID uuid) {
-		this.STATISTICS.put(uuid, new HashMap<>());
-		this.DELTA.put(uuid, new HashMap<>());
-		try (ResultSet rs = DBConnection.sql.readQuery("SELECT * FROM pk_stats WHERE uuid = ?", uuid.toString())) {
-			while (rs.next()) {
-				this.STATISTICS.get(uuid).put(rs.getInt("statId"), rs.getLong("statValue"));
-				this.DELTA.get(uuid).put(rs.getInt("statId"), 0L);
-			}
-		} catch (final SQLException e) {
-			e.printStackTrace();
+		// If they rejoined before their last session was saved, save it first. Database tasks run in order, so
+		// the read below will include it.
+		if (this.STORAGE.remove(uuid)) {
+			this.save(uuid, true);
 		}
-	}
-
-	public void save(final UUID uuid, final boolean async) {
-		if (!this.DELTA.containsKey(uuid)) {
-			return;
-		}
-		final Map<Integer, Long> stats = this.DELTA.get(uuid);
-		for (final Entry<Integer, Long> entry : stats.entrySet()) {
-			final int statId = entry.getKey();
-			final long statValue = entry.getValue();
-			try (ResultSet rs = DBConnection.sql.readQuery("SELECT * FROM pk_stats WHERE uuid = ? AND statId = ?", uuid.toString(), statId)) {
-				if (!rs.next()) {
-					if (async) {
-						DBConnection.sql.modifyQueryAsync("INSERT INTO pk_stats (statId, uuid, statValue) VALUES (?, ?, ?)", statId, uuid.toString(), statValue);
-					} else {
-						DBConnection.sql.modifyQuerySync("INSERT INTO pk_stats (statId, uuid, statValue) VALUES (?, ?, ?)", statId, uuid.toString(), statValue);
-					}
-				} else {
-					if (async) {
-						DBConnection.sql.modifyQueryAsync("UPDATE pk_stats SET statValue = statValue + ? WHERE uuid = ? AND statId = ?;", statValue, uuid.toString(), statId);
-					} else {
-						DBConnection.sql.modifyQuerySync("UPDATE pk_stats SET statValue = statValue + ? WHERE uuid = ? AND statId = ?;", statValue, uuid.toString(), statId);
-					}
+		final Map<Integer, Long> statistics = new ConcurrentHashMap<>();
+		this.STATISTICS.put(uuid, statistics);
+		this.DELTA.put(uuid, new ConcurrentHashMap<>());
+		DBConnection.sql.runAsync(() -> {
+			try (ResultSet rs = DBConnection.sql.readQuery("SELECT * FROM pk_stats WHERE uuid = ?", uuid.toString())) {
+				while (rs.next()) {
+					statistics.merge(rs.getInt("statId"), rs.getLong("statValue"), Long::sum);
 				}
 			} catch (final SQLException e) {
 				e.printStackTrace();
 			}
+		});
+	}
+
+	/**
+	 * Writes the statistics a player has gained since the last save to the database
+	 *
+	 * @param uuid The player
+	 * @param async Whether to write on the database thread
+	 */
+	public void save(final UUID uuid, final boolean async) {
+		final Map<Integer, Long> delta = this.DELTA.get(uuid);
+		if (delta == null) {
+			return;
+		}
+		// Take the unsaved values and reset them, so a later save doesn't add them again
+		final Map<Integer, Long> unsaved = new HashMap<>();
+		for (final Integer statId : delta.keySet()) {
+			final Long statValue = delta.remove(statId);
+			if (statValue != null && statValue != 0) {
+				unsaved.put(statId, statValue);
+			}
+		}
+		if (unsaved.isEmpty()) {
+			return;
+		}
+
+		final String query = DBConnection.sql instanceof MySQL
+				? "INSERT INTO pk_stats (statId, uuid, statValue) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE statValue = statValue + VALUES(statValue);"
+				: "INSERT INTO pk_stats (statId, uuid, statValue) VALUES (?, ?, ?) ON CONFLICT(statId, uuid) DO UPDATE SET statValue = statValue + excluded.statValue;";
+		final Runnable write = () -> unsaved.forEach((statId, statValue) -> DBConnection.sql.modifyQuerySync(query, statId, uuid.toString(), statValue));
+		if (async) {
+			DBConnection.sql.runAsync(write);
+		} else {
+			write.run();
 		}
 	}
 
@@ -176,11 +198,13 @@ public class StatisticsManager extends Manager implements Runnable {
 	}
 
 	public void addStatistic(final UUID uuid, final int statId, final long statDelta) {
-		if (!this.STATISTICS.containsKey(uuid) || !this.DELTA.containsKey(uuid)) {
+		final Map<Integer, Long> statistics = this.STATISTICS.get(uuid);
+		final Map<Integer, Long> delta = this.DELTA.get(uuid);
+		if (statistics == null || delta == null || statId < 0) {
 			return;
 		}
-		this.STATISTICS.get(uuid).put(statId, this.getStatisticCurrent(uuid, statId) + statDelta);
-		this.DELTA.get(uuid).put(statId, this.getStatisticDelta(uuid, statId) + statDelta);
+		statistics.merge(statId, statDelta, Long::sum);
+		delta.merge(statId, statDelta, Long::sum);
 
 	}
 

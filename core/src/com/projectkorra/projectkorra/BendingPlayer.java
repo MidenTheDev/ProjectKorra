@@ -389,7 +389,9 @@ public class BendingPlayer extends OfflineBendingPlayer {
 	 * @see #getBendingPlayer(OfflinePlayer)
 	 */
 	public static OfflineBendingPlayer getOfflineBendingPlayer(final String playerName) {
-		return playerName != null ? getBendingPlayer(Bukkit.getOfflinePlayer(playerName)) : null;
+		// Only players this server has seen can have bending data, so don't make a blocking request to Mojang for anyone else
+		final OfflinePlayer player = playerName != null ? Bukkit.getOfflinePlayerIfCached(playerName) : null;
+		return player != null ? getBendingPlayer(player) : null;
 	}
 
 	private static FileConfiguration getConfig() {

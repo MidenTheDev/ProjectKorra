@@ -20,6 +20,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.context.ParsedCommandNode;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
@@ -300,12 +301,22 @@ public abstract class PKCommand implements SubCommand {
 	 * @return The node
 	 */
 	public final LiteralArgumentBuilder<CommandSourceStack> createNode(final String alias) {
-		final LiteralArgumentBuilder<CommandSourceStack> node = io.papermc.paper.command.brigadier.Commands.literal(alias)
-				.requires(source -> this.current().canUse(sender(source)))
-				.executes(this::forward);
-		this.buildArguments(node);
-		return node;
+		this.buildingAlias = alias;
+		try {
+			final LiteralArgumentBuilder<CommandSourceStack> node = io.papermc.paper.command.brigadier.Commands.literal(alias)
+					.requires(source -> this.current().canUse(sender(source)))
+					.executes(this.forwarder());
+			this.buildArguments(node);
+			return node;
+		} finally {
+			this.buildingAlias = null;
+		}
 	}
+
+	/**
+	 * The alias whose node is being built. The helpers capture it so they know which literal starts the command.
+	 */
+	private String buildingAlias;
 
 	/**
 	 * Adds the argument nodes of this command to its literal. Override this to declare typed arguments using
@@ -322,7 +333,7 @@ public abstract class PKCommand implements SubCommand {
 	 * @return A single-word argument that suggests from {@link #getTabCompletion(CommandSender, List)} and runs the command
 	 */
 	protected RequiredArgumentBuilder<CommandSourceStack, String> word(final String name) {
-		return io.papermc.paper.command.brigadier.Commands.argument(name, StringArgumentType.word()).suggests(this::suggest).executes(this::forward);
+		return io.papermc.paper.command.brigadier.Commands.argument(name, StringArgumentType.word()).suggests(this.suggester()).executes(this.forwarder());
 	}
 
 	/**
@@ -330,7 +341,7 @@ public abstract class PKCommand implements SubCommand {
 	 * @return An argument taking the rest of the input that suggests from {@link #getTabCompletion(CommandSender, List)} and runs the command
 	 */
 	protected RequiredArgumentBuilder<CommandSourceStack, String> greedy(final String name) {
-		return io.papermc.paper.command.brigadier.Commands.argument(name, StringArgumentType.greedyString()).suggests(this::suggest).executes(this::forward);
+		return io.papermc.paper.command.brigadier.Commands.argument(name, StringArgumentType.greedyString()).suggests(this.suggester()).executes(this.forwarder());
 	}
 
 	/**
@@ -340,7 +351,7 @@ public abstract class PKCommand implements SubCommand {
 	 * @return An integer argument that suggests from {@link #getTabCompletion(CommandSender, List)} and runs the command
 	 */
 	protected RequiredArgumentBuilder<CommandSourceStack, Integer> integer(final String name, final int min, final int max) {
-		return io.papermc.paper.command.brigadier.Commands.argument(name, IntegerArgumentType.integer(min, max)).suggests(this::suggest).executes(this::forward);
+		return io.papermc.paper.command.brigadier.Commands.argument(name, IntegerArgumentType.integer(min, max)).suggests(this.suggester()).executes(this.forwarder());
 	}
 
 	/**
@@ -351,7 +362,7 @@ public abstract class PKCommand implements SubCommand {
 	 */
 	protected void literals(final ArgumentBuilder<CommandSourceStack, ?> parent, final String[] names, final UnaryOperator<LiteralArgumentBuilder<CommandSourceStack>> children) {
 		for (final String name : names) {
-			parent.then(children.apply(io.papermc.paper.command.brigadier.Commands.literal(name).executes(this::forward)));
+			parent.then(children.apply(io.papermc.paper.command.brigadier.Commands.literal(name).executes(this.forwarder())));
 		}
 		// Brigadier literals are case-sensitive and reject unknown input. Anything that doesn't match a literal falls
 		// through to execute() instead, which matches case-insensitively and shows the usage help.
@@ -361,10 +372,33 @@ public abstract class PKCommand implements SubCommand {
 	}
 
 	/**
+	 * @return A command that runs this command with the arguments typed after the literal currently being built
+	 */
+	private Command<CommandSourceStack> forwarder() {
+		final String alias = this.requireBuildingAlias();
+		return context -> this.forward(context, alias);
+	}
+
+	/**
+	 * @return A suggestion provider for the literal currently being built
+	 */
+	private SuggestionProvider<CommandSourceStack> suggester() {
+		final String alias = this.requireBuildingAlias();
+		return (context, builder) -> this.suggest(context, builder, alias);
+	}
+
+	private String requireBuildingAlias() {
+		if (this.buildingAlias == null) {
+			throw new IllegalStateException("Argument nodes can only be created inside buildArguments");
+		}
+		return this.buildingAlias;
+	}
+
+	/**
 	 * Runs the command with the arguments typed after its literal
 	 */
-	private int forward(final CommandContext<CommandSourceStack> context) {
-		final int end = this.literalEnd(context);
+	private int forward(final CommandContext<CommandSourceStack> context, final String alias) {
+		final int end = literalEnd(context, alias);
 		final List<String> args = end < 0 ? new ArrayList<>() : split(context.getInput().substring(end));
 		this.current().execute(sender(context.getSource()), args);
 		return Command.SINGLE_SUCCESS;
@@ -373,10 +407,10 @@ public abstract class PKCommand implements SubCommand {
 	/**
 	 * Suggests completions for the word at the cursor using {@link #getTabCompletion(CommandSender, List)}
 	 */
-	private CompletableFuture<Suggestions> suggest(final CommandContext<CommandSourceStack> context, final SuggestionsBuilder builder) {
+	private CompletableFuture<Suggestions> suggest(final CommandContext<CommandSourceStack> context, final SuggestionsBuilder builder, final String alias) {
 		final String input = builder.getInput();
 		final int wordStart = input.lastIndexOf(' ', input.length() - 1) + 1;
-		final int end = this.literalEnd(context);
+		final int end = literalEnd(context, alias);
 		final List<String> previous = end < 0 || end > wordStart ? new ArrayList<>() : split(input.substring(end, wordStart));
 		final CommandSender sender = sender(context.getSource());
 
@@ -386,17 +420,23 @@ public abstract class PKCommand implements SubCommand {
 	}
 
 	/**
-	 * Finds where the literal of this command ends in the input. Works through Paper's alias redirects and /execute.
+	 * Finds where the literal of this command ends in the input. The root command's label can have the same name
+	 * as the alias (e.g. "/b b FireBlast"), so this takes the last literal with that name before the first
+	 * argument. Works through Paper's alias redirects and /execute.
+	 * @param alias The alias the command's node was built under
 	 * @return The index after the literal, or -1 if it isn't in the context
 	 */
-	private int literalEnd(final CommandContext<CommandSourceStack> context) {
-		final List<String> aliases = Arrays.asList(this.getAliases());
+	private static int literalEnd(final CommandContext<CommandSourceStack> context, final String alias) {
+		int end = -1;
 		for (final ParsedCommandNode<CommandSourceStack> parsed : context.getNodes()) {
-			if (parsed.getNode() instanceof LiteralCommandNode && aliases.contains(parsed.getNode().getName())) {
-				return parsed.getRange().getEnd();
+			if (!(parsed.getNode() instanceof LiteralCommandNode)) {
+				break;
+			}
+			if (parsed.getNode().getName().equals(alias)) {
+				end = parsed.getRange().getEnd();
 			}
 		}
-		return -1;
+		return end;
 	}
 
 	/**

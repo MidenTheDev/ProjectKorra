@@ -5,17 +5,23 @@ import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
-
-import org.bukkit.scheduler.BukkitRunnable;
-
-import com.projectkorra.projectkorra.ProjectKorra;
 
 public abstract class Database {
 
 	protected final Logger log;
 	protected final String dbprefix;
 	protected Connection connection = null;
+	/**
+	 * All asynchronous database work runs on this single thread, so it runs in the order it was submitted
+	 */
+	private ExecutorService executor;
+	private volatile Thread executorThread;
 
 	public Database(final Logger log, final String dbprefix) {
 		this.log = log;
@@ -62,10 +68,73 @@ public abstract class Database {
 	 */
 	abstract Connection open();
 
+	private synchronized ExecutorService getExecutor() {
+		if (this.executor == null || this.executor.isShutdown()) {
+			this.executor = Executors.newSingleThreadExecutor(runnable -> {
+				final Thread thread = new Thread(runnable, "ProjectKorra Database");
+				thread.setDaemon(true);
+				this.executorThread = thread;
+				return thread;
+			});
+		}
+		return this.executor;
+	}
+
 	/**
-	 * Close connection to Database.
+	 * Runs a task on the database thread. Tasks run one at a time, in the order they were submitted, so a read
+	 * submitted after a write will see that write.
+	 *
+	 * @param task The task to run
+	 * @return A future that completes, off the main thread, when the task has run
+	 */
+	public CompletableFuture<Void> runAsync(final Runnable task) {
+		return CompletableFuture.runAsync(task, this.getExecutor()).whenComplete((v, e) -> {
+			if (e != null) {
+				e.printStackTrace();
+			}
+		});
+	}
+
+	/**
+	 * Runs a task that returns a result on the database thread. See {@link #runAsync(Runnable)}.
+	 *
+	 * @param task The task to run
+	 * @return A future that completes, off the main thread, with the result
+	 */
+	public <T> CompletableFuture<T> supplyAsync(final Supplier<T> task) {
+		return CompletableFuture.supplyAsync(task, this.getExecutor()).whenComplete((v, e) -> {
+			if (e != null) {
+				e.printStackTrace();
+			}
+		});
+	}
+
+	/**
+	 * Waits for all queued asynchronous database work to finish
+	 */
+	private void flush() {
+		final ExecutorService executor;
+		synchronized (this) {
+			executor = this.executor;
+		}
+		if (executor == null || Thread.currentThread() == this.executorThread) {
+			return;
+		}
+		executor.shutdown();
+		try {
+			if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+				this.printErr("Timed out waiting for queued database queries to finish.", true);
+			}
+		} catch (final InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	/**
+	 * Close connection to Database. Queued asynchronous queries are run first.
 	 */
 	public void close() {
+		this.flush();
 		if (this.connection != null) {
 			try {
 				this.connection.setAutoCommit(false);
@@ -90,17 +159,13 @@ public abstract class Database {
 	}
 
 	/**
-	 * Queries the Databases, for queries which modify data. Run asynchronously.
+	 * Queries the Databases, for queries which modify data. Run asynchronously on the database thread, in the
+	 * order they were submitted.
 	 *
 	 * @param query Query to run
 	 */
 	public void modifyQueryAsync(final String query, final Object... args) {
-		new BukkitRunnable() {
-			@Override
-			public void run() {
-				Database.this.doQuery(query, args);
-			}
-		}.runTaskAsynchronously(ProjectKorra.plugin);
+		this.runAsync(() -> this.doQuery(query, args));
 	}
 
 	/**

@@ -59,40 +59,40 @@ public class PermaremoveCommand extends PKCommand {
 	 * @param target The Player who's bending should be permaremoved
 	 */
 	private void permaremove(final CommandSender sender, final String target) {
-		final OfflinePlayer player = Bukkit.getOfflinePlayer(target);
-		if (!player.isOnline() && !player.hasPlayedBefore()) {
-			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.invalidPlayer).colorIfAbsent(NamedTextColor.RED));
-			return;
-		}
-
-		BendingPlayer.getOrLoadOfflineAsync(player).thenAccept(bPlayer -> {
-			boolean online = bPlayer instanceof BendingPlayer;
-			if (bPlayer.isPermaRemoved()) {
-				bPlayer.setPermaRemoved(false);
-				if (online) ChatUtil.sendBrandingMessage((Player) player, ChatUtil.legacy(this.restored).colorIfAbsent(NamedTextColor.GREEN));
-				if (!(sender instanceof Player) || !sender.getName().equalsIgnoreCase(target)) {
-					ChatUtil.sendBrandingMessage(sender, replace(ChatUtil.legacy(this.restoredConfirm), "{target}", Component.text(player.getName(), NamedTextColor.DARK_AQUA)).colorIfAbsent(NamedTextColor.GREEN));
-				}
-			} else {
-				PlayerChangeElementEvent event = new PlayerChangeElementEvent(sender, player, null, Result.PERMAREMOVE);
-
-				bPlayer.getElements().clear();
-				bPlayer.saveElements();
-				bPlayer.setPermaRemoved(true);
-				if (online) {
-					((BendingPlayer)bPlayer).removeUnusableAbilities();
-					ChatUtil.sendBrandingMessage((Player) player, ChatUtil.legacy(this.removed).colorIfAbsent(NamedTextColor.RED));
-					Bukkit.getServer().getPluginManager().callEvent(new PlayerChangeElementEvent(sender, (Player) player, null, Result.PERMAREMOVE));
-				}
-
-				if (!(sender instanceof Player) || !sender.getName().equalsIgnoreCase(target)) {
-					ChatUtil.sendBrandingMessage(sender, replace(ChatUtil.legacy(this.removedConfirm), "{target}", Component.text(player.getName(), NamedTextColor.DARK_AQUA)).colorIfAbsent(NamedTextColor.RED));
-				}
-
+		// Looked up off the main thread, as an unknown name can need a request to Mojang
+		this.getPlayer(target).thenAccept(player -> {
+			if (!player.isOnline() && !player.hasPlayedBefore()) {
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.invalidPlayer).colorIfAbsent(NamedTextColor.RED));
+				return;
 			}
+
+			BendingPlayer.getOrLoadOfflineAsync(player).thenAccept(bPlayer -> {
+				boolean online = bPlayer instanceof BendingPlayer;
+				if (bPlayer.isPermaRemoved()) {
+					bPlayer.setPermaRemoved(false);
+					if (online) ChatUtil.sendBrandingMessage((Player) player, ChatUtil.legacy(this.restored).colorIfAbsent(NamedTextColor.GREEN));
+					if (!(sender instanceof Player) || !sender.getName().equalsIgnoreCase(target)) {
+						ChatUtil.sendBrandingMessage(sender, replace(ChatUtil.legacy(this.restoredConfirm), "{target}", Component.text(player.getName(), NamedTextColor.DARK_AQUA)).colorIfAbsent(NamedTextColor.GREEN));
+					}
+				} else {
+					PlayerChangeElementEvent event = new PlayerChangeElementEvent(sender, player, null, Result.PERMAREMOVE);
+
+					bPlayer.getElements().clear();
+					bPlayer.saveElements();
+					bPlayer.setPermaRemoved(true);
+					if (online) {
+						((BendingPlayer)bPlayer).removeUnusableAbilities();
+						ChatUtil.sendBrandingMessage((Player) player, ChatUtil.legacy(this.removed).colorIfAbsent(NamedTextColor.RED));
+						Bukkit.getServer().getPluginManager().callEvent(new PlayerChangeElementEvent(sender, (Player) player, null, Result.PERMAREMOVE));
+					}
+
+					if (!(sender instanceof Player) || !sender.getName().equalsIgnoreCase(target)) {
+						ChatUtil.sendBrandingMessage(sender, replace(ChatUtil.legacy(this.removedConfirm), "{target}", Component.text(player.getName(), NamedTextColor.DARK_AQUA)).colorIfAbsent(NamedTextColor.RED));
+					}
+
+				}
+			});
 		});
-
-
 	}
 
 	/**

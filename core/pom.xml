@@ -96,12 +96,6 @@
   </repositories>
 
   <dependencies>
-    <!-- PaperLib -->
-    <dependency>
-      <groupId>io.papermc</groupId>
-      <artifactId>paperlib</artifactId>
-      <version>1.0.1</version>
-    </dependency>
     <!-- Minecraft Timings -->
     <!-- Paper API -->
     <dependency>
@@ -332,10 +326,6 @@
 
           </filters>
           <relocations>
-            <relocation>
-              <pattern>io.papermc.lib</pattern>
-              <shadedPattern>paperlib.projectkorra</shadedPattern>
-            </relocation>
             <relocation>
               <pattern>org.apache.commons</pattern>
               <shadedPattern>commonslang3.projectkorra</shadedPattern>

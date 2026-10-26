@@ -388,10 +388,23 @@ public class GeneralMethods {
 		int zMin = Math.min(z1, z2);
 		int zMax = Math.max(z1, z2);
 
+		// Getting a block in an unloaded chunk would load it synchronously, so skip those chunks
+		final int chunkXMin = xMin >> 4;
+		final int chunkZMin = zMin >> 4;
+		final boolean[][] loaded = new boolean[(xMax >> 4) - chunkXMin + 1][(zMax >> 4) - chunkZMin + 1];
+		for (int cx = 0; cx < loaded.length; cx++) {
+			for (int cz = 0; cz < loaded[cx].length; cz++) {
+				loaded[cx][cz] = world.isChunkLoaded(chunkXMin + cx, chunkZMin + cz);
+			}
+		}
+
 		final List<Block> blocks = new ArrayList<>();
 		for (int x = xMin; x <= xMax; x++) {
 			for (int y = yMin; y <= yMax; y++) {
 				for (int z = zMin; z <= zMax; z++) {
+					if (!loaded[(x >> 4) - chunkXMin][(z >> 4) - chunkZMin]) {
+						continue;
+					}
 					Block block = world.getBlockAt(x, y, z);
 					if (filter == null || filter.test(block)) {
 						blocks.add(block);

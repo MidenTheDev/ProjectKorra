@@ -1,6 +1,7 @@
 package com.projectkorra.projectkorra.util;
 
-import com.projectkorra.projectkorra.ProjectKorra;
+import io.papermc.paper.math.BlockPosition;
+import io.papermc.paper.math.Position;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -158,15 +159,22 @@ public class LightManager {
                 .forEach(player -> blockChangeQueue.add(new BlockChange(player, location, lightData)));
     }
 
+    /**
+     * Sends all queued light changes, batched into one multi block change per player. If a location changed more
+     * than once since the last batch, only its latest state is sent.
+     */
     private void processBlockChanges() {
+        final Map<Player, Map<BlockPosition, BlockData>> changes = new HashMap<>();
         BlockChange blockChange;
         while ((blockChange = blockChangeQueue.poll()) != null) {
-            Player player = blockChange.getPlayer();
-            BlockChange finalBlockChange = blockChange;
-            Bukkit.getScheduler().runTaskAsynchronously(ProjectKorra.plugin, () -> {
-                player.sendBlockChange(finalBlockChange.getLocation(), finalBlockChange.getBlockData());
-            });
+            changes.computeIfAbsent(blockChange.getPlayer(), player -> new LinkedHashMap<>())
+                    .put(Position.block(blockChange.getLocation()), blockChange.getBlockData());
         }
+        changes.forEach((player, blocks) -> {
+            if (player.isOnline()) {
+                player.sendMultiBlockChange(blocks);
+            }
+        });
     }
 
     /**
