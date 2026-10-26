@@ -1,10 +1,9 @@
-# ProjectKorra [![travis](https://travis-ci.org/ProjectKorra/ProjectKorra.svg?branch=master)](https://travis-ci.org/ProjectKorra/ProjectKorra)
+# Fork Overview:
+This fork is for the TrueBalance MC Minecraft Server. This Build of Project Korra runs on the experimental WIP branch and Re-adds the old ParticleEffect class to allow old addons to stay compatible, switches the entire plugin to the Paper/Adventure API, makes some changes to improve plugin performance where applicable, and adds in some features built for the TBMC Server (for example: the colored fire).
+# Original README:
 
 ![Core Icon](http://i.imgur.com/8XB8XHF.png)
-
-
-
-## About ProjectKorra
+## About ProjectKorr
 
 ProjectKorra is a place for members across the Minecraft and Bending Communities to come together and interact. ProjectKorra is one of the biggest Minecraft and Avatar/Korra related communities around and is still growing rapidly. Our goal is to bridge the two communities, providing users with a way to implement aspects of the hit television shows "Avatar: The Last Airbender" and "The Legend of Korra" into Minecraft.
 
