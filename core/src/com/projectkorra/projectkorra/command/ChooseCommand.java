@@ -5,7 +5,11 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.projectkorra.projectkorra.util.ChatUtil;
-import net.md_5.bungee.api.ChatColor;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -60,7 +64,7 @@ public class ChooseCommand extends PKCommand {
 			//Don't need to bother with offline players here because the sender is always online
 			BendingPlayer bPlayer = BendingPlayer.getBendingPlayer(sender.getName());
 			if (bPlayer.isPermaRemoved()) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Preset.BendingPermanentlyRemoved"));
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Preset.BendingPermanentlyRemoved")).colorIfAbsent(NamedTextColor.RED));
 				return;
 			}
 			if (!bPlayer.getElements().isEmpty() && !sender.hasPermission("bending.command.rechoose")) {
@@ -88,7 +92,7 @@ public class ChooseCommand extends PKCommand {
 					if (sender.hasPermission("bending.command.choose.ignorecooldown") || sender.hasPermission("bending.admin.choose")) {
 						bPlayer.removeCooldown("ChooseElement");
 					} else {
-						ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.onCooldown.replace("%cooldown%", TimeUtil.formatTime(bPlayer.getCooldown("ChooseElement") - System.currentTimeMillis())));
+						ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.onCooldown.replace("%cooldown%", TimeUtil.formatTime(bPlayer.getCooldown("ChooseElement") - System.currentTimeMillis()))).colorIfAbsent(NamedTextColor.RED));
 						return;
 					}
 				}
@@ -101,7 +105,7 @@ public class ChooseCommand extends PKCommand {
 
 				bPlayer.addCooldown("ChooseElement", this.cooldown, true);
 			} else {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidElement);
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.invalidElement).colorIfAbsent(NamedTextColor.RED));
 			}
 		} else if (args.size() == 2) {
 			if (!sender.hasPermission("bending.admin.choose")) {
@@ -111,7 +115,7 @@ public class ChooseCommand extends PKCommand {
 
 			this.getPlayer(args.get(1)).thenAccept((target) -> {
 				if (!target.hasPlayedBefore() && !target.isOnline()) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.playerNotFound);
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.playerNotFound).colorIfAbsent(NamedTextColor.RED));
 					return;
 				}
 				String element = args.get(0).toLowerCase();
@@ -140,7 +144,7 @@ public class ChooseCommand extends PKCommand {
 						bPlayer.addCooldown("ChooseElement", this.cooldown, true);
 					});
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidElement);
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.invalidElement).colorIfAbsent(NamedTextColor.RED));
 				}
 			}).exceptionally(e -> {
 				e.printStackTrace();
@@ -164,11 +168,11 @@ public class ChooseCommand extends PKCommand {
 			if (element instanceof SubElement) {
 				final SubElement sub = (SubElement) element;
 				bPlayer.addSubElement(sub);
-				final ChatColor color = sub.getColor();
+				final TextColor color = sub.getTextColor();
 				if (!(sender instanceof Player) || !((Player) sender).equals(target)) {
-					ChatUtil.sendBrandingMessage(sender, color + this.chosenOtherCFW.replace("{target}", ChatColor.DARK_AQUA + target.getName() + color).replace("{element}", sub.getName() + sub.getType().getBender()));
+					ChatUtil.sendBrandingMessage(sender, withTarget(this.chosenOtherCFW.replace("{element}", sub.getName() + sub.getType().getBender()), target, color));
 				} else {
-					if (online) ChatUtil.sendBrandingMessage((Player) target, color + this.chosenCFW.replace("{element}", sub.getName() + sub.getType().getBender()));
+					if (online) ChatUtil.sendBrandingMessage((Player) target, ChatUtil.legacy(this.chosenCFW.replace("{element}", sub.getName() + sub.getType().getBender())).colorIfAbsent(color));
 				}
 				bPlayer.saveSubElements();
 				if (online) {
@@ -219,18 +223,18 @@ public class ChooseCommand extends PKCommand {
 					}
 				}
 
-				final ChatColor color = element.getColor();
+				final TextColor color = element.getTextColor();
 				if (!(sender instanceof Player) || !((Player) sender).equals(target)) {
 					if (element != Element.AIR && element != Element.EARTH) {
-						ChatUtil.sendBrandingMessage(sender, color + this.chosenOtherCFW.replace("{target}", ChatColor.DARK_AQUA + target.getName() + color).replace("{element}", element.getName() + element.getType().getBender()));
+						ChatUtil.sendBrandingMessage(sender, withTarget(this.chosenOtherCFW.replace("{element}", element.getName() + element.getType().getBender()), target, color));
 					} else {
-						ChatUtil.sendBrandingMessage(sender, color + this.chosenOtherAE.replace("{target}", ChatColor.DARK_AQUA + target.getName() + color).replace("{element}", element.getName() + element.getType().getBender()));
+						ChatUtil.sendBrandingMessage(sender, withTarget(this.chosenOtherAE.replace("{element}", element.getName() + element.getType().getBender()), target, color));
 					}
 				} else {
 					if (element != Element.AIR && element != Element.EARTH) {
-						if (online) ChatUtil.sendBrandingMessage((Player) target, color + this.chosenCFW.replace("{element}", element.getName() + element.getType().getBender()));
+						if (online) ChatUtil.sendBrandingMessage((Player) target, ChatUtil.legacy(this.chosenCFW.replace("{element}", element.getName() + element.getType().getBender())).colorIfAbsent(color));
 					} else {
-						if (online) ChatUtil.sendBrandingMessage((Player) target, color + this.chosenAE.replace("{element}", element.getName() + element.getType().getBender()));
+						if (online) ChatUtil.sendBrandingMessage((Player) target, ChatUtil.legacy(this.chosenAE.replace("{element}", element.getName() + element.getType().getBender())).colorIfAbsent(color));
 					}
 				}
 				bPlayer.saveElements();
@@ -244,6 +248,23 @@ public class ChooseCommand extends PKCommand {
 			e.printStackTrace();
 			return null;
 		});
+	}
+
+	/**
+	 * Parses a language message, replacing {target} with the target's name in dark aqua
+	 */
+	private static Component withTarget(final String message, final OfflinePlayer target, final TextColor color) {
+		return ChatUtil.legacy(message).replaceText(builder -> builder.matchLiteral("{target}").replacement(Component.text(target.getName(), NamedTextColor.DARK_AQUA))).colorIfAbsent(color);
+	}
+
+	@Override
+	public boolean canUse(final CommandSender sender) {
+		return super.canUse(sender) || sender.hasPermission("bending.admin.choose");
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		node.then(this.word("element").then(this.word("player")));
 	}
 
 	public static boolean isVowel(final char c) {

@@ -1,14 +1,14 @@
 package com.projectkorra.projectkorra.command;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.List;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.projectkorra.projectkorra.ProjectKorra;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.ChatColor;
+import com.projectkorra.projectkorra.util.ChatUtil;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 
 import com.projectkorra.projectkorra.GeneralMethods;
@@ -34,13 +34,18 @@ public class DebugCommand extends PKCommand {
 
 		GeneralMethods.runDebug();
 		final File debugFile = new File(ProjectKorra.plugin.getDataFolder(), "debug.txt");
-		TextComponent message = new TextComponent("");
-		ClickEvent click = new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, debugFile.getAbsolutePath());
-		message.setClickEvent(click);
-		List<BaseComponent> comps = Arrays.asList(TextComponent.fromLegacyText(ChatColor.GREEN + ConfigManager.languageConfig.get().getString("Commands.Debug.SuccessfullyExported")));
-		comps.forEach(c -> c.setClickEvent(click));
-		message.setExtra(comps);
-		sender.spigot().sendMessage(message);
+		sender.sendMessage(ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Debug.SuccessfullyExported"))
+				.colorIfAbsent(NamedTextColor.GREEN)
+				.clickEvent(ClickEvent.copyToClipboard(debugFile.getAbsolutePath())));
+	}
+
+	@Override
+	public boolean canUse(final CommandSender sender) {
+		return sender.hasPermission("bending.admin." + this.getName());
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
 	}
 
 	/**
@@ -52,7 +57,7 @@ public class DebugCommand extends PKCommand {
 	@Override
 	public boolean hasPermission(final CommandSender sender) {
 		if (!sender.hasPermission("bending.admin." + this.getName())) {
-			sender.sendMessage(super.noPermissionMessage);
+			sender.sendMessage(ChatUtil.legacy(super.noPermissionMessage));
 			return false;
 		}
 		return true;

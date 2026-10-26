@@ -8,7 +8,9 @@ import com.projectkorra.projectkorra.ProjectKorra;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
 import com.projectkorra.projectkorra.util.ChatUtil;
 import com.projectkorra.projectkorra.util.TimeUtil;
-import net.md_5.bungee.api.ChatColor;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -113,7 +115,7 @@ public class TempCommand extends PKCommand {
 	public void _execute(OfflinePlayer player, final CommandSender sender, final List<String> args) {
 
 		if (!player.hasPlayedBefore() && !player.isOnline()) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.playerNotFound);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.playerNotFound));
 			return;
 		}
 
@@ -123,7 +125,7 @@ public class TempCommand extends PKCommand {
 				Element element = Element.fromString(args.get(2));
 
 				if (element == null && !args.get(2).equalsIgnoreCase("all")) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidElement);
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.invalidElement));
 					return;
 				} else if (args.get(2).equalsIgnoreCase("all")) {
 					BendingPlayer.getOrLoadOfflineAsync(player).thenAccept(bPlayer -> {
@@ -145,7 +147,7 @@ public class TempCommand extends PKCommand {
 		Element element = Element.fromString(args.get(2));
 
 		if (element == null && !args.get(2).equalsIgnoreCase("all")) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidElement);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.invalidElement));
 			return;
 		}
 
@@ -155,11 +157,11 @@ public class TempCommand extends PKCommand {
 			time = TimeUtil.unformatTime(args.get(3));
 
 			if (time <= 0) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidTime);
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.invalidTime));
 				return;
 			}
 		} catch (NumberFormatException e) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidTime);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.invalidTime));
 			return;
 		}
 
@@ -187,25 +189,25 @@ public class TempCommand extends PKCommand {
 		String cmd = "/bending temp " + type.toLowerCase() + " <player> <element> <time>";
 		if (type.equalsIgnoreCase("remove")) cmd = "/bending temp remove <player> <element>";
 
-		sender.sendMessage(ChatUtil.color(ChatColor.GOLD + ConfigManager.languageConfig.get().getString("Commands.ProperUsage")
-				.replace("{command}", ChatColor.DARK_AQUA + cmd)));
-		sender.sendMessage(ChatUtil.color(ChatColor.YELLOW + ConfigManager.languageConfig.get().getString("Commands.Temp.Description." + type)));
+		sender.sendMessage(ChatUtil.legacy("&6" + ConfigManager.languageConfig.get().getString("Commands.ProperUsage")
+				.replace("{command}", "&3" + cmd)));
+		sender.sendMessage(ChatUtil.legacy("&e" + ConfigManager.languageConfig.get().getString("Commands.Temp.Description." + type)));
 	}
 
 	private void addElement(Element element, OfflineBendingPlayer bPlayer, CommandSender sender, long time) {
 		boolean sub = element instanceof SubElement;
 
 		if (!sub && bPlayer.getElements().contains(element)) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.alreadyHasElement.replace("{target}", bPlayer.getName()));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.alreadyHasElement.replace("{target}", bPlayer.getName())));
 			return;
 		} else if (sub && bPlayer.getSubElements().contains(element)) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.alreadyHasSubElement.replace("{target}", bPlayer.getName()));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.alreadyHasSubElement.replace("{target}", bPlayer.getName())));
 			return;
 		} else if (!sub && bPlayer.getTempElements().containsKey(element) && bPlayer.getTempElementTime(element) > 0) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.alreadyHasTempElement.replace("{target}", bPlayer.getName()));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.alreadyHasTempElement.replace("{target}", bPlayer.getName())));
 			return;
 		} else if (sub && bPlayer.getTempSubElements().containsKey(element) && bPlayer.getTempElementTime(element) > 0) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.alreadyHasTempSubElement.replace("{target}", bPlayer.getName()));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.alreadyHasTempSubElement.replace("{target}", bPlayer.getName())));
 			return;
 		}
 
@@ -218,21 +220,21 @@ public class TempCommand extends PKCommand {
 		String newExpiryString = TimeUtil.formatTime(time, true);
 
 
-		ChatUtil.sendBrandingMessage(sender, ChatColor.YELLOW + messageOther
-				.replace("{element}", element.getColor() + element.getName() + ChatColor.YELLOW)
-				.replace("{bending}", element.getColor() + element.getType().getBending()+ ChatColor.YELLOW)
-				.replace("{bender}", element.getColor() + element.getType().getBender()+ ChatColor.YELLOW)
-				.replace("{bend}", element.getColor() + element.getType().getBend() + ChatColor.YELLOW)
+		ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&e" + messageOther
+				.replace("{element}", code(element.getTextColor()) + element.getName() + "&e")
+				.replace("{bending}", code(element.getTextColor()) + element.getType().getBending()+ "&e")
+				.replace("{bender}", code(element.getTextColor()) + element.getType().getBender()+ "&e")
+				.replace("{bend}", code(element.getTextColor()) + element.getType().getBend() + "&e")
 				.replace("{target}", bPlayer.getName())
-				.replace("{time}", newExpiryString));
+				.replace("{time}", newExpiryString)));
 
 		if (bPlayer.isOnline() && (!(sender instanceof Player) || !((Player)sender).getUniqueId().equals(bPlayer.getUUID()))) {
-			ChatUtil.sendBrandingMessage(bPlayer.getPlayer().getPlayer(), ChatColor.YELLOW + message
-					.replace("{element}", element.getColor() + element.getName() + ChatColor.YELLOW)
-					.replace("{bending}", element.getColor() + element.getType().getBending() + ChatColor.YELLOW)
-					.replace("{bender}", element.getColor() + element.getType().getBender() + ChatColor.YELLOW)
-					.replace("{bend}", element.getColor() + element.getType().getBend() + ChatColor.YELLOW)
-					.replace("{time}", newExpiryString));
+			ChatUtil.sendBrandingMessage(bPlayer.getPlayer().getPlayer(), ChatUtil.legacy("&e" + message
+					.replace("{element}", code(element.getTextColor()) + element.getName() + "&e")
+					.replace("{bending}", code(element.getTextColor()) + element.getType().getBending() + "&e")
+					.replace("{bender}", code(element.getTextColor()) + element.getType().getBender() + "&e")
+					.replace("{bend}", code(element.getTextColor()) + element.getType().getBend() + "&e")
+					.replace("{time}", newExpiryString)));
 		}
 	}
 
@@ -270,22 +272,22 @@ public class TempCommand extends PKCommand {
 
 		if (!bPlayer.setTempElement(element, sender, newExpiry)) return;
 
-		ChatUtil.sendBrandingMessage(sender, ChatColor.YELLOW + messageOther
-				.replace("{element}", element.getColor() + element.getName())
+		ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&e" + messageOther
+				.replace("{element}", code(element.getTextColor()) + element.getName())
 				.replace("{bending}", element.getType().getBending())
 				.replace("{bender}", element.getType().getBender())
 				.replace("{bend}", element.getType().getBend())
 				.replace("{target}", bPlayer.getName())
-				.replace("{time}", newExpiryString));
+				.replace("{time}", newExpiryString)));
 
 		if (bPlayer.isOnline() && (!(sender instanceof Player) || !((Player)sender).getUniqueId().equals(bPlayer.getUUID()))) {
-			ChatUtil.sendBrandingMessage(bPlayer.getPlayer().getPlayer(), ChatColor.YELLOW + message
-					.replace("{element}", element.getColor() + element.getName())
-					.replace("{element}", element.getColor() + element.getName())
+			ChatUtil.sendBrandingMessage(bPlayer.getPlayer().getPlayer(), ChatUtil.legacy("&e" + message
+					.replace("{element}", code(element.getTextColor()) + element.getName())
+					.replace("{element}", code(element.getTextColor()) + element.getName())
 					.replace("{bending}", element.getType().getBending())
 					.replace("{bender}", element.getType().getBender())
 					.replace("{bend}", element.getType().getBend())
-					.replace("{time}", newExpiryString));
+					.replace("{time}", newExpiryString)));
 		}
 	}
 
@@ -310,12 +312,12 @@ public class TempCommand extends PKCommand {
 		//If they don't have it, or they do but it has already expired
 		if (element instanceof SubElement ? subElementCheck : elementCheck) { //or it has already expired
 			if (!all) { //Don't bother the player if we are doing it for all elements
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.removeElementNotFound
-						.replace("{element}", element.getColor() + element.getName())
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.removeElementNotFound
+						.replace("{element}", code(element.getTextColor()) + element.getName())
 						.replace("{bending}", element.getType().getBending())
 						.replace("{bender}", element.getType().getBender())
 						.replace("{bend}", element.getType().getBend())
-						.replace("{target}", bPlayer.getName()));
+						.replace("{target}", bPlayer.getName())));
 			}
 
 			return;
@@ -339,21 +341,21 @@ public class TempCommand extends PKCommand {
 
 		if (!bPlayer.setTempElement(element, sender, newExpiry)) return;
 
-		ChatUtil.sendBrandingMessage(sender, ChatColor.YELLOW + messageOther
-				.replace("{element}", element.getColor() + element.getName())
+		ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&e" + messageOther
+				.replace("{element}", code(element.getTextColor()) + element.getName())
 				.replace("{bending}", element.getType().getBending())
 				.replace("{bender}", element.getType().getBender())
 				.replace("{bend}", element.getType().getBend())
 				.replace("{target}", bPlayer.getName())
-				.replace("{time}", newExpiraryString));
+				.replace("{time}", newExpiraryString)));
 
 		if (bPlayer.isOnline() && (!(sender instanceof Player) || !((Player)sender).getUniqueId().equals(bPlayer.getUUID()))) {
-			ChatUtil.sendBrandingMessage(bPlayer.getPlayer().getPlayer(), ChatColor.YELLOW + message
-					.replace("{element}", element.getColor() + element.getName())
+			ChatUtil.sendBrandingMessage(bPlayer.getPlayer().getPlayer(), ChatUtil.legacy("&e" + message
+					.replace("{element}", code(element.getTextColor()) + element.getName())
 					.replace("{bending}", element.getType().getBending())
 					.replace("{bender}", element.getType().getBender())
 					.replace("{bend}", element.getType().getBend())
-					.replace("{time}", newExpiraryString));
+					.replace("{time}", newExpiraryString)));
 		}
 	}
 
@@ -362,31 +364,31 @@ public class TempCommand extends PKCommand {
 
 		if (!bPlayer.hasTempElement(element)) { //or it has already expired
 			if (!all) { //Don't bother the player if we are doing it for all elements
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.removeElementNotFound
-						.replace("{element}", element.getColor() + element.getName())
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.removeElementNotFound
+						.replace("{element}", code(element.getTextColor()) + element.getName())
 						.replace("{bending}", element.getType().getBending())
 						.replace("{bender}", element.getType().getBender())
 						.replace("{bend}", element.getType().getBend())
-						.replace("{target}", bPlayer.getName()));
+						.replace("{target}", bPlayer.getName())));
 			}
 			return false;
 		}
 
 		if (!bPlayer.removeTempElement(element, sender)) return false;
 
-		ChatUtil.sendBrandingMessage(sender, ChatColor.YELLOW + this.removeSuccessOther
-				.replace("{element}", element.getColor() + element.getName())
+		ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&e" + this.removeSuccessOther
+				.replace("{element}", code(element.getTextColor()) + element.getName())
 				.replace("{bending}", element.getType().getBending())
 				.replace("{bender}", element.getType().getBender())
 				.replace("{bend}", element.getType().getBend())
-				.replace("{target}", bPlayer.getName()));
+				.replace("{target}", bPlayer.getName())));
 
 		if (bPlayer.isOnline() && (!(sender instanceof Player) || !((Player)sender).getUniqueId().equals(bPlayer.getUUID()))) {
-			ChatUtil.sendBrandingMessage(bPlayer.getPlayer().getPlayer(), ChatColor.YELLOW + this.removeSuccess
-					.replace("{element}", element.getColor() + element.getName())
+			ChatUtil.sendBrandingMessage(bPlayer.getPlayer().getPlayer(), ChatUtil.legacy("&e" + this.removeSuccess
+					.replace("{element}", code(element.getTextColor()) + element.getName())
 					.replace("{bending}", element.getType().getBending())
 					.replace("{bender}", element.getType().getBender())
-					.replace("{bend}", element.getType().getBend()));
+					.replace("{bend}", element.getType().getBend())));
 		}
 
 		return true;
@@ -402,8 +404,35 @@ public class TempCommand extends PKCommand {
 		}
 
 		if (!removed) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.removeNoElements.replace("{target}", bPlayer.getName()));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.removeNoElements.replace("{target}", bPlayer.getName())));
 		}
+	}
+
+	/**
+	 * @return A legacy color code for the color, so it carries on until the next color code like the old ChatColor strings did
+	 */
+	private static String code(final TextColor color) {
+		return "&" + color.asHexString();
+	}
+
+	/**
+	 * Temp needs the base node or one of the action nodes; execute checks the specific action.
+	 */
+	@Override
+	public boolean canUse(final CommandSender sender) {
+		if (super.canUse(sender)) return true;
+		for (final String action : new String[] { "add", "extend", "reduce", "remove" }) {
+			if (sender.hasPermission("bending.command.temp." + action)) return true;
+		}
+		return false;
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		for (final String[] aliases : new String[][] { this.addAliases, this.extendAliases, this.reduceAliases }) {
+			this.literals(node, aliases, action -> action.then(this.word("player").then(this.word("element").then(this.word("time")))));
+		}
+		this.literals(node, this.removeAliases, action -> action.then(this.word("player").then(this.word("element"))));
 	}
 
 	@Override

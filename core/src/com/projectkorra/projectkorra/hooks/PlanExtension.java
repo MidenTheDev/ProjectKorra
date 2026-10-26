@@ -23,7 +23,9 @@ import com.projectkorra.projectkorra.ability.CoreAbility;
 import com.projectkorra.projectkorra.object.Preset;
 import com.projectkorra.projectkorra.util.TimeUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.projectkorra.projectkorra.util.ChatUtil;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -74,7 +76,7 @@ public class PlanExtension implements DataExtension {
             negated = true
     )
     public String elements(UUID playerUUID) {
-        return getPlayer(playerUUID).getElements().stream().map(e -> e.getColor() + e.getName() + ChatColor.RESET).reduce((a, b) -> a + ", " + b).orElse("None");
+        return getPlayer(playerUUID).getElements().stream().map(e -> ChatUtil.toLegacy(Component.text(e.getName(), e.getTextColor())) + "\u00A7r").reduce((a, b) -> a + ", " + b).orElse("None");
     }
 
     @StringProvider(
@@ -88,7 +90,7 @@ public class PlanExtension implements DataExtension {
     )
     public String elementsShort(UUID playerUUID) {
         OfflineBendingPlayer bPlayer = getPlayer(playerUUID);
-        return bPlayer.getElements().isEmpty() ? "Nonbender" : (bPlayer.getElements().size() > 1 ? ChatColor.DARK_PURPLE + "Avatar" : bPlayer.getElements().get(0).getColor() + bPlayer.getElements().get(0).getName());
+        return bPlayer.getElements().isEmpty() ? "Nonbender" : ChatUtil.toLegacy(bPlayer.getElements().size() > 1 ? Component.text("Avatar", NamedTextColor.DARK_PURPLE) : Component.text(bPlayer.getElements().get(0).getName(), bPlayer.getElements().get(0).getTextColor()));
     }
 
     @NumberProvider(
@@ -141,7 +143,7 @@ public class PlanExtension implements DataExtension {
         CoreAbility coreAbility = CoreAbility.getAbility(ability);
         if (coreAbility == null) return ability;
 
-        return coreAbility.getElement().getColor() + ability;
+        return ChatUtil.toLegacy(Component.text(ability, coreAbility.getElement().getTextColor()));
     }
 
     /*@TableProvider(tableColor = Color.GREY)
@@ -175,7 +177,7 @@ public class PlanExtension implements DataExtension {
 
         for (Element element : bPlayer.getTempElements().keySet()) {
             long duration = System.currentTimeMillis() - bPlayer.getTempElements().get(element);
-            table.addRow(element.getColor() + element.getName(), TimeUtil.formatTime(duration));
+            table.addRow(ChatUtil.toLegacy(Component.text(element.getName(), element.getTextColor())), TimeUtil.formatTime(duration));
         }
         for (Element.SubElement subElement : bPlayer.getTempSubElements().keySet()) {
             long duration = bPlayer.getTempSubElements().get(subElement);

@@ -9,12 +9,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.ArgumentBuilder;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.context.ParsedCommandNode;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.projectkorra.projectkorra.ProjectKorra;
 import com.projectkorra.projectkorra.util.ChatUtil;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -60,8 +73,8 @@ public abstract class PKCommand implements SubCommand {
 		this.description = description;
 		this.aliases = aliases;
 
-		this.noPermissionMessage = ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.NoPermission");
-		this.mustBePlayerMessage = ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.MustBePlayer");
+		this.noPermissionMessage = ChatUtil.color("&c" + ConfigManager.languageConfig.get().getString("Commands.NoPermission"));
+		this.mustBePlayerMessage = ChatUtil.color("&c" + ConfigManager.languageConfig.get().getString("Commands.MustBePlayer"));
 
 		instances.put(name, this);
 	}
@@ -88,10 +101,10 @@ public abstract class PKCommand implements SubCommand {
 
 	@Override
 	public void help(final CommandSender sender, final boolean description) {
-		String message = ConfigManager.languageConfig.get().getString("Commands.ProperUsage").replace("{command}", ChatColor.DARK_AQUA + this.properUse);
-		sender.sendMessage(ChatColor.GOLD + message);
+		final String message = ConfigManager.languageConfig.get().getString("Commands.ProperUsage").replace("{command}", "&3" + this.properUse + "&6");
+		sender.sendMessage(ChatUtil.legacy(message).colorIfAbsent(NamedTextColor.GOLD));
 		if (description) {
-			sender.sendMessage(ChatColor.YELLOW + this.description);
+			sender.sendMessage(ChatUtil.legacy(this.description).colorIfAbsent(NamedTextColor.YELLOW));
 		}
 	}
 
@@ -107,7 +120,7 @@ public abstract class PKCommand implements SubCommand {
 		if (sender.hasPermission("bending.command." + this.name)) {
 			return true;
 		} else {
-			sender.sendMessage(this.noPermissionMessage);
+			sender.sendMessage(ChatUtil.legacy(this.noPermissionMessage));
 			return false;
 		}
 	}
@@ -245,7 +258,7 @@ public abstract class PKCommand implements SubCommand {
 				page = 1;
 			}
 		}
-		strings.add(ChatColor.DARK_GRAY + "- [" + ChatColor.GRAY + page + "/" + (int) Math.ceil((entries.size() + .0) / (8 + .0)) + ChatColor.DARK_GRAY + "]");
+		strings.add(ChatUtil.color("&8- [&7" + page + "/" + (int) Math.ceil((entries.size() + .0) / (8 + .0)) + "&8]"));
 		strings.add(title);
 		if (entries.size() > ((page * 8) - 8)) {
 			for (int i = ((page * 8) - 8); i < entries.size(); i++) {
@@ -266,6 +279,158 @@ public abstract class PKCommand implements SubCommand {
 	 * */
 	protected List<String> getTabCompletion(final CommandSender sender, final List<String> args) {
 		return new ArrayList<String>();
+	}
+
+	/**
+	 * Whether the sender may see and run this command at all. This gates the Brigadier node, so it must
+	 * return true for every sender that any code path of {@link #execute(CommandSender, List)} accepts.
+	 * More specific permission checks (and their messages) stay inside execute.
+	 * @param sender The sender to check
+	 * @return True if the sender can use the command
+	 */
+	public boolean canUse(final CommandSender sender) {
+		return sender.hasPermission("bending.command." + this.name);
+	}
+
+	/**
+	 * Builds the Brigadier node for one alias of this command. The node forwards the typed arguments to
+	 * {@link #execute(CommandSender, List)} and gets its suggestions from
+	 * {@link #getTabCompletion(CommandSender, List)}.
+	 * @param alias The literal to register the node under
+	 * @return The node
+	 */
+	public final LiteralArgumentBuilder<CommandSourceStack> createNode(final String alias) {
+		final LiteralArgumentBuilder<CommandSourceStack> node = io.papermc.paper.command.brigadier.Commands.literal(alias)
+				.requires(source -> this.current().canUse(sender(source)))
+				.executes(this::forward);
+		this.buildArguments(node);
+		return node;
+	}
+
+	/**
+	 * Adds the argument nodes of this command to its literal. Override this to declare typed arguments using
+	 * {@link #word(String)}, {@link #integer(String, int, int)}, {@link #greedy(String)} and
+	 * {@link #literals(ArgumentBuilder, String[], UnaryOperator)}. By default, the command accepts any arguments.
+	 * @param node The literal node of this command
+	 */
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		node.then(this.greedy("args"));
+	}
+
+	/**
+	 * @param name The argument name
+	 * @return A single-word argument that suggests from {@link #getTabCompletion(CommandSender, List)} and runs the command
+	 */
+	protected RequiredArgumentBuilder<CommandSourceStack, String> word(final String name) {
+		return io.papermc.paper.command.brigadier.Commands.argument(name, StringArgumentType.word()).suggests(this::suggest).executes(this::forward);
+	}
+
+	/**
+	 * @param name The argument name
+	 * @return An argument taking the rest of the input that suggests from {@link #getTabCompletion(CommandSender, List)} and runs the command
+	 */
+	protected RequiredArgumentBuilder<CommandSourceStack, String> greedy(final String name) {
+		return io.papermc.paper.command.brigadier.Commands.argument(name, StringArgumentType.greedyString()).suggests(this::suggest).executes(this::forward);
+	}
+
+	/**
+	 * @param name The argument name
+	 * @param min The minimum value
+	 * @param max The maximum value
+	 * @return An integer argument that suggests from {@link #getTabCompletion(CommandSender, List)} and runs the command
+	 */
+	protected RequiredArgumentBuilder<CommandSourceStack, Integer> integer(final String name, final int min, final int max) {
+		return io.papermc.paper.command.brigadier.Commands.argument(name, IntegerArgumentType.integer(min, max)).suggests(this::suggest).executes(this::forward);
+	}
+
+	/**
+	 * Adds a literal for each name to the parent, each with the same children
+	 * @param parent The node to add the literals to
+	 * @param names The names of the literals, e.g. a sub command and its aliases
+	 * @param children Adds the child nodes to each literal
+	 */
+	protected void literals(final ArgumentBuilder<CommandSourceStack, ?> parent, final String[] names, final UnaryOperator<LiteralArgumentBuilder<CommandSourceStack>> children) {
+		for (final String name : names) {
+			parent.then(children.apply(io.papermc.paper.command.brigadier.Commands.literal(name).executes(this::forward)));
+		}
+		// Brigadier literals are case-sensitive and reject unknown input. Anything that doesn't match a literal falls
+		// through to execute() instead, which matches case-insensitively and shows the usage help.
+		if (parent.getArguments().stream().noneMatch(child -> child.getName().equals("args"))) {
+			parent.then(this.greedy("args"));
+		}
+	}
+
+	/**
+	 * Runs the command with the arguments typed after its literal
+	 */
+	private int forward(final CommandContext<CommandSourceStack> context) {
+		final int end = this.literalEnd(context);
+		final List<String> args = end < 0 ? new ArrayList<>() : split(context.getInput().substring(end));
+		this.current().execute(sender(context.getSource()), args);
+		return Command.SINGLE_SUCCESS;
+	}
+
+	/**
+	 * Suggests completions for the word at the cursor using {@link #getTabCompletion(CommandSender, List)}
+	 */
+	private CompletableFuture<Suggestions> suggest(final CommandContext<CommandSourceStack> context, final SuggestionsBuilder builder) {
+		final String input = builder.getInput();
+		final int wordStart = input.lastIndexOf(' ', input.length() - 1) + 1;
+		final int end = this.literalEnd(context);
+		final List<String> previous = end < 0 || end > wordStart ? new ArrayList<>() : split(input.substring(end, wordStart));
+		final CommandSender sender = sender(context.getSource());
+
+		final SuggestionsBuilder offset = builder.createOffset(Math.max(wordStart, builder.getStart()));
+		BendingTabComplete.getPossibleCompletions(new String[] { input.substring(Math.max(wordStart, builder.getStart())) }, this.current().getTabCompletion(sender, previous)).forEach(offset::suggest);
+		return offset.buildFuture();
+	}
+
+	/**
+	 * Finds where the literal of this command ends in the input. Works through Paper's alias redirects and /execute.
+	 * @return The index after the literal, or -1 if it isn't in the context
+	 */
+	private int literalEnd(final CommandContext<CommandSourceStack> context) {
+		final List<String> aliases = Arrays.asList(this.getAliases());
+		for (final ParsedCommandNode<CommandSourceStack> parsed : context.getNodes()) {
+			if (parsed.getNode() instanceof LiteralCommandNode && aliases.contains(parsed.getNode().getName())) {
+				return parsed.getRange().getEnd();
+			}
+		}
+		return -1;
+	}
+
+	/**
+	 * Gets the instance of this command that is currently registered. Commands are recreated when ProjectKorra
+	 * reloads, but the Brigadier tree is not.
+	 * @return The current instance of this command
+	 */
+	protected PKCommand current() {
+		return instances.getOrDefault(this.name, this);
+	}
+
+	/**
+	 * Gets the sender a command should act as. Under /execute as, this is the executing entity, which matches how
+	 * Bukkit commands behaved.
+	 * @param source The command source
+	 * @return The sender
+	 */
+	static CommandSender sender(final CommandSourceStack source) {
+		return source.getExecutor() != null ? source.getExecutor() : source.getSender();
+	}
+
+	/**
+	 * Splits command input into arguments, ignoring repeated spaces
+	 * @param input The input
+	 * @return The arguments
+	 */
+	static List<String> split(final String input) {
+		final List<String> args = new ArrayList<>();
+		for (final String arg : input.split(" ")) {
+			if (!arg.isEmpty()) {
+				args.add(arg);
+			}
+		}
+		return args;
 	}
 
 	/**

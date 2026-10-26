@@ -5,7 +5,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.projectkorra.projectkorra.util.ChatUtil;
-import org.bukkit.ChatColor;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -41,7 +43,7 @@ public class ClearCommand extends PKCommand {
 		if (!this.hasPermission(sender) || !this.correctLength(sender, args.size(), 0, 1) || !this.isPlayer(sender)) {
 			return;
 		} else if (MultiAbilityManager.hasMultiAbilityBound((Player) sender)) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.cantEditBinds);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.cantEditBinds).colorIfAbsent(NamedTextColor.RED));
 			return;
 		}
 
@@ -62,12 +64,12 @@ public class ClearCommand extends PKCommand {
 				bPlayer.getAbilities().remove(i);
 				bPlayer.saveAbility(null, i);
 			}
-			ChatUtil.sendBrandingMessage(sender, ChatColor.YELLOW + this.cleared);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.cleared).colorIfAbsent(NamedTextColor.YELLOW));
 		} else if (args.size() == 1) {
 			try {
 				final int slot = Integer.parseInt(args.get(0));
 				if (slot < 1 || slot > 9) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.wrongNumber);
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.wrongNumber).colorIfAbsent(NamedTextColor.RED));
 				}
 
 				if (bPlayer.getAbilities().get(slot) != null) {
@@ -80,14 +82,19 @@ public class ClearCommand extends PKCommand {
 
 					bPlayer.getAbilities().remove(slot);
 					bPlayer.saveAbility(null, slot);
-					ChatUtil.sendBrandingMessage(sender, ChatColor.YELLOW + this.clearedSlot.replace("{slot}", String.valueOf(slot)));
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.clearedSlot.replace("{slot}", String.valueOf(slot))).colorIfAbsent(NamedTextColor.YELLOW));
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.YELLOW + this.alreadyEmpty);
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.alreadyEmpty).colorIfAbsent(NamedTextColor.YELLOW));
 				}
 			} catch (final NumberFormatException e) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.wrongNumber);
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.wrongNumber).colorIfAbsent(NamedTextColor.RED));
 			}
 		}
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		node.then(this.integer("slot", 1, 9));
 	}
 
 	@Override

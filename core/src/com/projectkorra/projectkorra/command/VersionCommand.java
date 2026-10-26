@@ -2,7 +2,10 @@ package com.projectkorra.projectkorra.command;
 
 import java.util.List;
 
-import org.bukkit.ChatColor;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 
 import com.projectkorra.projectkorra.GeneralMethods;
@@ -24,22 +27,29 @@ public class VersionCommand extends PKCommand {
 			return;
 		}
 
-		sender.sendMessage(ChatColor.GREEN + "Core Version: " + ChatColor.RED + ProjectKorra.plugin.getDescription().getVersion());
+		sender.sendMessage(line("Core Version: ", ProjectKorra.plugin.getPluginMeta().getVersion()));
 		if (GeneralMethods.hasRPG()) {
-			sender.sendMessage(ChatColor.GREEN + "RPG Version: " + ChatColor.RED + GeneralMethods.getRPG().getDescription().getVersion());
+			sender.sendMessage(line("RPG Version: ", GeneralMethods.getRPG().getPluginMeta().getVersion()));
 		}
 		if (GeneralMethods.hasItems()) {
-			sender.sendMessage(ChatColor.GREEN + "Items Version: " + ChatColor.RED + GeneralMethods.getItems().getDescription().getVersion());
+			sender.sendMessage(line("Items Version: ", GeneralMethods.getItems().getPluginMeta().getVersion()));
 		}
 		if (GeneralMethods.hasSpirits()) {
-			sender.sendMessage(ChatColor.GREEN + "Spirits Version: " + ChatColor.RED + GeneralMethods.getSpirits().getDescription().getVersion());
+			sender.sendMessage(line("Spirits Version: ", GeneralMethods.getSpirits().getPluginMeta().getVersion()));
 		}
 		if (GeneralMethods.hasProbending()) {
-			sender.sendMessage(ChatColor.GREEN + "Probending Version: " + ChatColor.RED + GeneralMethods.getProbending().getDescription().getVersion());
+			sender.sendMessage(line("Probending Version: ", GeneralMethods.getProbending().getPluginMeta().getVersion()));
 		}
-		sender.sendMessage(ChatColor.GREEN + "Founded by: " + ChatColor.RED + "MistPhizzle");
-		sender.sendMessage(ChatColor.GREEN + "Special thanks to " + ChatColor.RED + "Orion304 " + ChatColor.GREEN + "for establishing this great community.");
-		sender.sendMessage(ChatColor.GREEN + "Learn More: " + ChatColor.RED + "http://projectkorra.com");
+		sender.sendMessage(line("Founded by: ", "MistPhizzle"));
+		sender.sendMessage(Component.text("Special thanks to ", NamedTextColor.GREEN).append(Component.text("Orion304 ", NamedTextColor.RED)).append(Component.text("for establishing this great community.", NamedTextColor.GREEN)));
+		sender.sendMessage(line("Learn More: ", "http://projectkorra.com"));
 	}
+
+	private static Component line(final String label, final String value) {
+		return Component.text(label, NamedTextColor.GREEN).append(Component.text(value, NamedTextColor.RED));
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {}
 
 }

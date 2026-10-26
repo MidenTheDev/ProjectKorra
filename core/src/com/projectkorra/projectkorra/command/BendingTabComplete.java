@@ -16,13 +16,18 @@ import org.bukkit.command.TabCompleter;
  */
 public class BendingTabComplete implements TabCompleter {
 
+	/**
+	 * @deprecated /bending is a Brigadier command now and gets its suggestions from each {@link PKCommand}.
+	 *             This is only kept for addons that call it directly.
+	 */
+	@Deprecated
 	@Override
 	public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
 		if (args.length == 0 || args.length == 1) {
 			return getPossibleCompletions(args, getCommandsForUser(sender));
 		} else {
 			for (final PKCommand cmd : PKCommand.instances.values()) {
-				if (Arrays.asList(cmd.getAliases()).contains(args[0].toLowerCase()) && sender.hasPermission("bending.command." + cmd.getName())) {
+				if (Arrays.asList(cmd.getAliases()).contains(args[0].toLowerCase()) && cmd.canUse(sender)) {
 					final List<String> newargs = new ArrayList<>();
 					for (int i = 1; i < args.length - 1; i++) {
 						if (!(args[i].equals("") || args[i].equals(" "))) {
@@ -65,9 +70,9 @@ public class BendingTabComplete implements TabCompleter {
 	/** Returns a list of subcommands the sender can use. */
 	public static List<String> getCommandsForUser(final CommandSender sender) {
 		final List<String> list = new ArrayList<String>();
-		for (final String cmd : PKCommand.instances.keySet()) {
-			if (sender.hasPermission("bending.command." + cmd.toLowerCase())) {
-				list.add(cmd);
+		for (final PKCommand cmd : PKCommand.instances.values()) {
+			if (cmd.canUse(sender)) {
+				list.add(cmd.getName());
 			}
 		}
 		Collections.sort(list);

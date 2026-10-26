@@ -28,7 +28,8 @@ import com.projectkorra.projectkorra.hooks.CanBindHook;
 import com.projectkorra.projectkorra.object.Preset;
 import com.projectkorra.projectkorra.region.RegionProtection;
 import com.projectkorra.projectkorra.util.ChatUtil;
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.bukkit.Bukkit;
@@ -699,11 +700,12 @@ public class BendingPlayer extends OfflineBendingPlayer {
 				continue;
 			}
 
-			ChatUtil.sendBrandingMessage(player, ChatUtil.color(ChatColor.YELLOW + expired
-					.replace("{element}", subElement.getColor() + subElement.getName())
+			final SubElement expiredSub = subElement;
+			ChatUtil.sendBrandingMessage(player, ChatUtil.legacy(expired
 					.replace("{bending}", subElement.getType().getBending())
 					.replace("{bender}", subElement.getType().getBender())
-					.replace("{bend}", subElement.getType().getBend())));
+					.replace("{bend}", subElement.getType().getBend()))
+					.replaceText(builder -> builder.matchLiteral("{element}").replacement(Component.text(expiredSub.getName(), expiredSub.getTextColor()))));
 			subIterator.remove();
 		}
 
@@ -722,11 +724,12 @@ public class BendingPlayer extends OfflineBendingPlayer {
             }
 
 			String message = element == Element.AVATAR ? expiredAvatar : expired;
-            ChatUtil.sendBrandingMessage(player, ChatUtil.color(ChatColor.YELLOW + message
-                    .replace("{element}", element.getColor() + element.getName())
+            final Element expiredElement = element;
+            ChatUtil.sendBrandingMessage(player, ChatUtil.legacy(message
                     .replace("{bending}", element.getType().getBending())
                     .replace("{bender}", element.getType().getBender())
-                    .replace("{bend}", element.getType().getBend())));
+                    .replace("{bend}", element.getType().getBend()))
+                    .replaceText(builder -> builder.matchLiteral("{element}").replacement(Component.text(expiredElement.getName(), expiredElement.getTextColor()))));
             elementIterator.remove();
 
             if (element == Element.AVATAR) {
@@ -819,14 +822,14 @@ public class BendingPlayer extends OfflineBendingPlayer {
 	 */
 	protected void postLoad() {
 		if (!this.toggled) {
-			ChatUtil.sendBrandingMessage(this.player, ChatColor.YELLOW + ConfigManager.languageConfig.get().getString("Command.Toggle.Reminder"));
+			ChatUtil.sendBrandingMessage(this.player, ConfigManager.languageConfig.get().getString("Command.Toggle.Reminder"));
 		}
 
 		Preset.loadPresets(this.player);
 
 		final boolean chatEnabled = ConfigManager.languageConfig.get().getBoolean("Chat.Enable");
 
-		String prefix = ChatColor.WHITE + ChatColor.translateAlternateColorCodes('&', ConfigManager.languageConfig.get().getString("Chat.Prefixes.Nonbender", "")) + " ";
+		String prefix = "&f" + ConfigManager.languageConfig.get().getString("Chat.Prefixes.Nonbender", "") + " ";
 		if (this.player.hasPermission("bending.avatar") || (this.hasElement(Element.AIR) && this.hasElement(Element.EARTH) && this.hasElement(Element.FIRE) && this.hasElement(Element.WATER))) {
 			prefix = Element.AVATAR.getPrefix();
 		} else if (this.getElements().size() > 0) {
@@ -835,8 +838,7 @@ public class BendingPlayer extends OfflineBendingPlayer {
 		}
 
 		if (chatEnabled) {
-			this.player.setDisplayName(this.player.getName());
-			this.player.setDisplayName(prefix + ChatColor.RESET + this.player.getDisplayName());
+			this.player.displayName(Component.text().append(ChatUtil.legacy(prefix), Component.text(this.player.getName(), NamedTextColor.WHITE)).build());
 		}
 
 		// Handle the AirSpout/WaterSpout login glitches.

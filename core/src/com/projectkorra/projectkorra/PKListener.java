@@ -146,16 +146,19 @@ import com.projectkorra.projectkorra.waterbending.multiabilities.WaterArms;
 import com.projectkorra.projectkorra.waterbending.passive.FastSwim;
 import com.projectkorra.projectkorra.waterbending.passive.HydroSink;
 
-import net.md_5.bungee.api.ChatColor;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Statistic;
+import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.enchantments.EnchantmentTarget;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Item;
@@ -424,9 +427,9 @@ public class PKListener implements Listener {
             } else if (element != null) {
                 prefix = element.getPrefix();
             } else {
-                prefix = ChatColor.WHITE + ChatUtil.color(ConfigManager.languageConfig.get().getString("Chat.Prefixes.Nonbender")) + " ";
+                prefix = "&f" + ConfigManager.languageConfig.get().getString("Chat.Prefixes.Nonbender") + " ";
             }
-            player.setDisplayName(prefix + ChatColor.RESET + player.getName());
+            player.displayName(Component.text().append(ChatUtil.legacy(prefix), Component.text(player.getName(), NamedTextColor.WHITE)).build());
         }
 
 		BendingBoardManager.updateAllSlots(player);
@@ -760,7 +763,7 @@ public class PKListener implements Listener {
 
 		if (entity instanceof Player player) {
 			if (ConfigManager.languageConfig.get().getBoolean("DeathMessages.Enabled")) {
-				BENDING_PLAYER_DEATH.put(player, Pair.of(ability.getElement().getColor() + abilityName, attacker));
+				BENDING_PLAYER_DEATH.put(player, Pair.of(ChatUtil.toLegacy(Component.text(abilityName, ability.getElement().getTextColor())), attacker));
 				Bukkit.getScheduler().runTaskLater(plugin, () -> BENDING_PLAYER_DEATH.remove(player), 20L);
 			}
 			if (attacker != null && ProjectKorra.isStatisticsEnabled()) {
@@ -772,33 +775,47 @@ public class PKListener implements Listener {
 		}
 	}
 
+	/**
+	 * Gets the element whose color and prefix a player's chat messages use
+	 * @return The element, or null for nonbenders
+	 */
+	private static Element getChatElement(final Player player, final BendingPlayer bPlayer) {
+		if (bPlayer == null) {
+			return null;
+		} else if (player.hasPermission("bending.avatar") || bPlayer.getElements().stream().anyMatch(Element::isAvatarElement)) {
+			return Element.AVATAR;
+		} else if (!bPlayer.getElements().isEmpty()) {
+			return bPlayer.getElements().getFirst();
+		}
+		return null;
+	}
+
+	/**
+	 * Other chat plugins still build their formats on the legacy chat event, so the {element} and {elementcolor}
+	 * placeholders they may contain can only be filled in here.
+	 */
+	@SuppressWarnings("deprecation")
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
 	public void onPlayerChat(final AsyncPlayerChatEvent event) {
-		final Player player = event.getPlayer();
-		final BendingPlayer bPlayer = BendingPlayer.getBendingPlayer(player);
+		final Element chatElement = getChatElement(event.getPlayer(), BendingPlayer.getBendingPlayer(event.getPlayer()));
+		final String color = chatElement == null ? "\u00A7f" : chatElement.getColor().toString();
+		final String element = ConfigManager.languageConfig.get().getString("Chat.Prefixes." + (chatElement == null ? "Nonbender" : chatElement.getName()));
+		event.setFormat(event.getFormat().replaceAll("(?i)\\{element}", color + element + "\u00A7r").replaceAll("(?i)\\{element_?color}", color));
+	}
 
-		String elementKey = "Nonbender";
-		ChatColor color = ChatColor.WHITE;
-		if (bPlayer != null) {
-			if (player.hasPermission("bending.avatar") || bPlayer.getElements().stream().anyMatch(Element::isAvatarElement)) {
-				color = Element.AVATAR.getColor();
-				elementKey = Element.AVATAR.getName();
-			} else if (!bPlayer.getElements().isEmpty()) {
-				color = bPlayer.getElements().getFirst().getColor();
-				elementKey = bPlayer.getElements().getFirst().getName();
-			}
-		}
-		final String element = ConfigManager.languageConfig.get().getString("Chat.Prefixes." + elementKey);
-		event.setFormat(event.getFormat().replaceAll("(?i)\\{element}", color + element + ChatColor.RESET).replaceAll("(?i)\\{element_?color}", color + ""));
-
+	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+	public void onAsyncChat(final AsyncChatEvent event) {
+		final BendingPlayer bPlayer = BendingPlayer.getBendingPlayer(event.getPlayer());
 		if (!ConfigManager.languageConfig.get().getBoolean("Chat.Enable") || bPlayer == null) {
 			return;
 		}
 
-		String format = ConfigManager.languageConfig.get().getString("Chat.Format");
-		format = format.replace("<message>", "%2$s");
-		format = format.replace("<name>", color + player.getDisplayName() + ChatColor.RESET);
-		event.setFormat(format);
+		final Element chatElement = getChatElement(event.getPlayer(), bPlayer);
+		final TextColor color = chatElement == null ? NamedTextColor.WHITE : chatElement.getTextColor();
+		final Component format = ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Chat.Format"));
+		event.renderer((source, sourceDisplayName, message, viewer) -> format
+				.replaceText(builder -> builder.matchLiteral("<name>").replacement(Component.text().color(color).append(sourceDisplayName).build()))
+				.replaceText(builder -> builder.matchLiteral("<message>").replacement(message)));
 	}
 
 	@EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
@@ -978,7 +995,7 @@ public class PKListener implements Listener {
 		if (deathInfo != null) {
 			final String ability = deathInfo.getLeft();
 			final Player killer = deathInfo.getRight();
-			final String tempAbility = ChatColor.stripColor(ability).replaceAll(" ", "");
+			final String tempAbility = ChatUtil.stripColor(ability).replaceAll(" ", "");
 			final CoreAbility coreAbil = CoreAbility.getAbility(tempAbility);
 			String deathMessage = ConfigManager.languageConfig.get().getString("DeathMessages.Default");
 			Element element = coreAbil != null ? coreAbil.getElement() : null;
@@ -1002,7 +1019,7 @@ public class PKListener implements Listener {
 							.replace("{attacker}", killer.getName())
 							.replace("{ability}", ability);
 
-			event.setDeathMessage(deathMessage);
+			event.deathMessage(ChatUtil.legacy(deathMessage));
 		}
 	}
 
@@ -1125,16 +1142,15 @@ public class PKListener implements Listener {
 
 		if (ConfigManager.languageConfig.get().getBoolean("Chat.Branding.JoinMessage.Enabled")) {
 			Bukkit.getScheduler().runTaskLater(plugin, () -> {
-				ChatColor color = ChatColor.of(ConfigManager.languageConfig.get().getString("Chat.Branding.Color").toUpperCase());
-				color = color == null ? ChatColor.GOLD : color;
+				final TextColor color = ChatUtil.getBrandingColor();
 				final String topBorder = ConfigManager.languageConfig.get().getString("Chat.Branding.Borders.TopBorder");
 				final String bottomBorder = ConfigManager.languageConfig.get().getString("Chat.Branding.Borders.BottomBorder");
 				if (!topBorder.isEmpty()) {
-					player.sendMessage(ChatUtil.color(topBorder));
+					player.sendMessage(ChatUtil.legacy(topBorder));
 				}
-				player.sendMessage(ChatUtil.multiline(color + "This server is running ProjectKorra version " + plugin.getDescription().getVersion() + " for bending! Find out more at http://www.projectkorra.com!"));
+				player.sendMessage(Component.text("This server is running ProjectKorra version " + plugin.getPluginMeta().getVersion() + " for bending! Find out more at http://www.projectkorra.com!", color));
 				if (!bottomBorder.isEmpty()) {
-					player.sendMessage(ChatUtil.color(bottomBorder));
+					player.sendMessage(ChatUtil.legacy(bottomBorder));
 				}
 			}, 20 * 4);
 		}
@@ -1895,7 +1911,7 @@ public class PKListener implements Listener {
 
 		Player player = event.getPlayer();
 		ItemStack mainHand = player.getInventory().getItemInMainHand();
-		if (EnchantmentTarget.WEARABLE.includes(mainHand) && EnchantmentTarget.ARMOR.includes(mainHand) && TempArmor.hasTempArmor(player)) {
+		if (Tag.ITEMS_ENCHANTABLE_ARMOR.isTagged(mainHand.getType()) && TempArmor.hasTempArmor(player)) {
 			event.setCancelled(true);
 		}
 	}

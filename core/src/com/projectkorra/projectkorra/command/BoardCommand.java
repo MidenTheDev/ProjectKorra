@@ -2,6 +2,8 @@ package com.projectkorra.projectkorra.command;
 
 import java.util.List;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -23,5 +25,9 @@ public class BoardCommand extends PKCommand {
 			return;
 		}
 		BendingBoardManager.toggleBoard((Player) sender, false);
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
 	}
 }

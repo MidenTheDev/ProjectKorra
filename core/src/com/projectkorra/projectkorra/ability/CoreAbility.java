@@ -1,5 +1,9 @@
 package com.projectkorra.projectkorra.ability;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import com.projectkorra.projectkorra.util.ChatUtil;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -31,7 +35,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -285,7 +288,7 @@ public abstract class CoreAbility implements Ability {
 					e.printStackTrace();
 					Bukkit.getLogger().severe(abil.toString());
 					try {
-						abil.getPlayer().sendMessage(ChatColor.YELLOW + "[" + new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date()) + "] " + ChatColor.RED + "There was an error running " + abil.getName() + ". please notify the server owner describing exactly what you were doing at this moment");
+						abil.getPlayer().sendMessage(Component.text("[" + new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(new Date()) + "] ", NamedTextColor.YELLOW).append(Component.text("There was an error running " + abil.getName() + ". please notify the server owner describing exactly what you were doing at this moment", NamedTextColor.RED)));
 					} catch (final Exception me) {
 						Bukkit.getLogger().severe("unable to notify ability user of error");
 					}
@@ -796,7 +799,7 @@ public abstract class CoreAbility implements Ability {
 		String displayedMessage = getMovePreviewWithoutCooldownTimer(player, false);
 		if (bPlayer.isOnCooldown(this)) {
 			final long cooldown = bPlayer.getCooldown(this.getName()) - System.currentTimeMillis();
-			displayedMessage += this.getElement().getColor() + " - " + TimeUtil.formatTime(cooldown);
+			displayedMessage += ChatUtil.toLegacy(Component.text(" - " + TimeUtil.formatTime(cooldown), this.getElement().getTextColor()));
 		}
 
 		return displayedMessage;
@@ -806,7 +809,7 @@ public abstract class CoreAbility implements Ability {
 		final BendingPlayer bPlayer = BendingPlayer.getBendingPlayer(player);
 		String displayedMessage = "";
 		if (forceCooldown || bPlayer.isOnCooldown(this)) {
-			displayedMessage = this.getElement().getColor() + "" + ChatColor.STRIKETHROUGH + this.getName();
+			displayedMessage = ChatUtil.toLegacy(Component.text(this.getName(), this.getElement().getTextColor(), TextDecoration.STRIKETHROUGH));
 		} else {
 			boolean isActiveStance = bPlayer.getStance() != null && bPlayer.getStance().getStanceName().equals(this.getName());
 			boolean isActiveAvatarState = bPlayer.isAvatarState() && this.getName().equals("AvatarState");
@@ -814,9 +817,9 @@ public abstract class CoreAbility implements Ability {
 			boolean isActiveTremorSense = bPlayer.isTremorSensing() && this.getName().equals("Tremorsense");
 			
 			if (isActiveStance || isActiveAvatarState || isActiveIllumination || isActiveTremorSense) {
-				displayedMessage = this.getElement().getColor() + "" + ChatColor.UNDERLINE + this.getName();
+				displayedMessage = ChatUtil.toLegacy(Component.text(this.getName(), this.getElement().getTextColor(), TextDecoration.UNDERLINED));
 			} else {
-				displayedMessage = this.getElement().getColor() + this.getName();
+				displayedMessage = ChatUtil.toLegacy(Component.text(this.getName(), this.getElement().getTextColor()));
 			}
 		}
 

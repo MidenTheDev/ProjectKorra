@@ -3,9 +3,12 @@ package com.projectkorra.projectkorra.command;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.projectkorra.projectkorra.util.ChatUtil;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -58,7 +61,7 @@ public class PermaremoveCommand extends PKCommand {
 	private void permaremove(final CommandSender sender, final String target) {
 		final OfflinePlayer player = Bukkit.getOfflinePlayer(target);
 		if (!player.isOnline() && !player.hasPlayedBefore()) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidPlayer);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.invalidPlayer).colorIfAbsent(NamedTextColor.RED));
 			return;
 		}
 
@@ -66,9 +69,9 @@ public class PermaremoveCommand extends PKCommand {
 			boolean online = bPlayer instanceof BendingPlayer;
 			if (bPlayer.isPermaRemoved()) {
 				bPlayer.setPermaRemoved(false);
-				if (online) ChatUtil.sendBrandingMessage((Player) player, ChatColor.GREEN + this.restored);
+				if (online) ChatUtil.sendBrandingMessage((Player) player, ChatUtil.legacy(this.restored).colorIfAbsent(NamedTextColor.GREEN));
 				if (!(sender instanceof Player) || !sender.getName().equalsIgnoreCase(target)) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + this.restoredConfirm.replace("{target}", ChatColor.DARK_AQUA + player.getName() + ChatColor.GREEN));
+					ChatUtil.sendBrandingMessage(sender, replace(ChatUtil.legacy(this.restoredConfirm), "{target}", Component.text(player.getName(), NamedTextColor.DARK_AQUA)).colorIfAbsent(NamedTextColor.GREEN));
 				}
 			} else {
 				PlayerChangeElementEvent event = new PlayerChangeElementEvent(sender, player, null, Result.PERMAREMOVE);
@@ -78,12 +81,12 @@ public class PermaremoveCommand extends PKCommand {
 				bPlayer.setPermaRemoved(true);
 				if (online) {
 					((BendingPlayer)bPlayer).removeUnusableAbilities();
-					ChatUtil.sendBrandingMessage((Player) player, ChatColor.RED + this.removed);
+					ChatUtil.sendBrandingMessage((Player) player, ChatUtil.legacy(this.removed).colorIfAbsent(NamedTextColor.RED));
 					Bukkit.getServer().getPluginManager().callEvent(new PlayerChangeElementEvent(sender, (Player) player, null, Result.PERMAREMOVE));
 				}
 
 				if (!(sender instanceof Player) || !sender.getName().equalsIgnoreCase(target)) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.removedConfirm.replace("{target}", ChatColor.DARK_AQUA + player.getName() + ChatColor.RED));
+					ChatUtil.sendBrandingMessage(sender, replace(ChatUtil.legacy(this.removedConfirm), "{target}", Component.text(player.getName(), NamedTextColor.DARK_AQUA)).colorIfAbsent(NamedTextColor.RED));
 				}
 
 			}
@@ -105,6 +108,20 @@ public class PermaremoveCommand extends PKCommand {
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public boolean canUse(final CommandSender sender) {
+		return sender.hasPermission("bending.admin.permaremove");
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		node.then(this.word("player"));
+	}
+
+	private static Component replace(final Component component, final String placeholder, final Component replacement) {
+		return component.replaceText(builder -> builder.matchLiteral(placeholder).replacement(replacement));
 	}
 
 	@Override

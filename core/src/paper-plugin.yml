@@ -1,13 +1,69 @@
 name: ProjectKorra
-author: ProjectKorra
-api-version: 1.21.11
 version: ${project.version}
 main: com.projectkorra.projectkorra.ProjectKorra
-softdepend: [GriefDefender, WorldGuard, WorldEdit, Factions, GriefPrevention, Towny, NoCheatPlus, LWC, Residence, RedProtect, PlaceholderAPI, Lands, Plan, HuskTowns]
-commands:
-  projectkorra:
-    aliases: [b,bending,mtla,tla,korra,pk,bend]
-    usage: /<command>
+description: 'A plugin that brings Avatar: The Last Airbender to Minecraft'
+authors: [ProjectKorra]
+website: https://projectkorra.com/
+api-version: '26.2'
+# The /projectkorra command is registered with Brigadier in Commands.java
+dependencies:
+  server:
+    GriefDefender:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    WorldGuard:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    WorldEdit:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    Factions:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    GriefPrevention:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    Towny:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    NoCheatPlus:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    LWC:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    Residence:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    RedProtect:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    Lands:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    Plan:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    HuskTowns:
+      load: BEFORE
+      required: false
+      join-classpath: true
 permissions:
   bending.admin:
     default: op

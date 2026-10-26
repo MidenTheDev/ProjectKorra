@@ -6,12 +6,13 @@ import com.projectkorra.projectkorra.ability.util.MultiAbilityManager;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
 import com.projectkorra.projectkorra.object.Preset;
 import com.projectkorra.projectkorra.util.ChatUtil;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -141,7 +142,7 @@ public class PresetCommand extends PKCommand {
 			final List<String> presetNames = new ArrayList<String>();
 
 			if (presets == null || presets.isEmpty()) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noPresets);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.noPresets);
 				return;
 			}
 
@@ -149,12 +150,12 @@ public class PresetCommand extends PKCommand {
 				presetNames.add(preset.getName());
 			}
 
-			for (final String s : this.getPage(presetNames, ChatColor.GOLD + "Presets: ", page, false)) {
+			for (final String s : this.getPage(presetNames, ChatUtil.color("&6Presets: "), page, false)) {
 				if (firstMessage) {
 					ChatUtil.sendBrandingMessage(sender, s);
 					firstMessage = false;
 				} else {
-					sender.sendMessage(ChatColor.YELLOW + s);
+					sender.sendMessage(ChatUtil.legacy(s).colorIfAbsent(NamedTextColor.YELLOW));
 				}
 			}
 		} else if (Arrays.asList(deletealiases).contains(args.get(0)) && this.hasPermission(sender, "delete")) { // bending preset delete name.
@@ -172,16 +173,16 @@ public class PresetCommand extends PKCommand {
 			}
 
 			if (!Preset.presetExists(target, name)) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noPresetName);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.noPresetName);
 				return;
 			}
 
 			final Preset preset = Preset.getPreset(target, name);
 			preset.delete().thenAccept(b -> {
 				if (b) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + this.deletePreset.replace("{name}", ChatColor.YELLOW + preset.getName() + ChatColor.GREEN));
+					ChatUtil.sendBrandingMessage(sender, "&a" + this.deletePreset.replace("{name}", "&e" + preset.getName() + "&a"));
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.databaseError.replace("{name}", ChatColor.YELLOW + preset.getName() + ChatColor.RED));
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.databaseError.replace("{name}", "&e" + preset.getName() + "&c"));
 				}
 			}).exceptionally(e -> {
 				e.printStackTrace();
@@ -194,29 +195,29 @@ public class PresetCommand extends PKCommand {
 				BendingPlayer bPlayer = BendingPlayer.getBendingPlayer(player);
 
 				if (name == null) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidName);
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.invalidName);
 				} else if (bPlayer.isPermaRemoved()) {
-					ChatUtil.sendBrandingMessage(player, ChatColor.RED + this.bendingRemoved);
+					ChatUtil.sendBrandingMessage(player, "&c" + this.bendingRemoved);
 				} else if (Preset.presetExists(player, name)) {
 					final Preset preset = Preset.getPreset(player, name);
 
-					ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + this.bound.replace("{name}", ChatColor.YELLOW + preset.getName() + ChatColor.GREEN));
+					ChatUtil.sendBrandingMessage(sender, "&a" + this.bound.replace("{name}", "&e" + preset.getName() + "&a"));
 					boolean boundAll = Preset.bindPreset(player, preset);
 
 					if (!boundAll) {
-						ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.failedToBindAll);
+						ChatUtil.sendBrandingMessage(sender, "&c" + this.failedToBindAll);
 					}
 				} else if (Preset.externalPresetExists(name) && this.hasPermission(sender, "bind.external")) {
 					Preset.bindExternalPreset(player, name);
 				} else if (!Preset.externalPresetExists(name) && this.hasPermission(sender, "bind.external")) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noPresetNameExternal);
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.noPresetNameExternal);
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noPresetName);
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.noPresetName);
 				}
 
 			} else if (this.hasPermission(sender, "bind.external.assign") && Preset.externalPresetExists(name)) {
 				if (!Preset.externalPresetExists(name)) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noPresetNameExternal);
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.noPresetNameExternal);
 					return;
 				}
 
@@ -225,18 +226,18 @@ public class PresetCommand extends PKCommand {
 					BendingPlayer bPlayer2 = BendingPlayer.getBendingPlayer(target);
 
 					if (bPlayer2.isPermaRemoved()) {
-						ChatUtil.sendBrandingMessage(target, ChatColor.RED + this.bendingRemovedOther);
+						ChatUtil.sendBrandingMessage(target, "&c" + this.bendingRemovedOther);
 						return;
 					}
 					final boolean boundAll = Preset.bindExternalPreset(target, name);
 
-					ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + this.boundOtherConfirm.replace("{target}", ChatColor.YELLOW + target.getName() + ChatColor.GREEN).replace("{name}", ChatColor.YELLOW + name + ChatColor.GREEN + ChatColor.YELLOW));
-					ChatUtil.sendBrandingMessage(target, ChatColor.GREEN + this.bound.replace("{name}", ChatColor.YELLOW + name + ChatColor.GREEN));
+					ChatUtil.sendBrandingMessage(sender, "&a" + this.boundOtherConfirm.replace("{target}", "&e" + target.getName() + "&a").replace("{name}", "&e" + name + "&a" + "&e"));
+					ChatUtil.sendBrandingMessage(target, "&a" + this.bound.replace("{name}", "&e" + name + "&a"));
 					if (!boundAll) {
-						ChatUtil.sendBrandingMessage(target, ChatColor.RED + this.failedToBindAll);
+						ChatUtil.sendBrandingMessage(target, "&c" + this.failedToBindAll);
 					}
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.playerNotFound);
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.playerNotFound);
 				}
 			} else if (this.hasPermission(sender, "bind.assign")) {
 				target = Bukkit.getPlayer(args.get(2));
@@ -245,23 +246,23 @@ public class PresetCommand extends PKCommand {
 					BendingPlayer bPlayer2 = BendingPlayer.getBendingPlayer(target);
 
 					if (bPlayer2.isPermaRemoved()) {
-						ChatUtil.sendBrandingMessage(target, ChatColor.RED + this.bendingRemovedOther);
+						ChatUtil.sendBrandingMessage(target, "&c" + this.bendingRemovedOther);
 						return;
 					}
 					else if (!Preset.presetExists(target, name)) {
-						ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noPresetName);
+						ChatUtil.sendBrandingMessage(sender, "&c" + this.noPresetName);
 						return;
 					}
 					final Preset preset = Preset.getPreset(target, name);
 					final boolean boundAll = Preset.bindPreset(target, preset);
 
-					ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + this.boundOtherConfirm.replace("{target}", ChatColor.YELLOW + target.getName() + ChatColor.GREEN).replace("{name}", ChatColor.YELLOW + name + ChatColor.GREEN + ChatColor.YELLOW));
-					ChatUtil.sendBrandingMessage(target, ChatColor.GREEN + this.succesfullyCopied.replace("{target}", ChatColor.YELLOW + target.getName() + ChatColor.GREEN));
+					ChatUtil.sendBrandingMessage(sender, "&a" + this.boundOtherConfirm.replace("{target}", "&e" + target.getName() + "&a").replace("{name}", "&e" + name + "&a" + "&e"));
+					ChatUtil.sendBrandingMessage(target, "&a" + this.succesfullyCopied.replace("{target}", "&e" + target.getName() + "&a"));
 					if (!boundAll) {
-						ChatUtil.sendBrandingMessage(target, ChatColor.RED + this.failedToBindAll);
+						ChatUtil.sendBrandingMessage(target, "&c" + this.failedToBindAll);
 					}
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.playerNotFound);
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.playerNotFound);
 				}
 			}
 		} else if (Arrays.asList(createaliases).contains(args.get(0)) && this.hasPermission(sender, "create")) { // bending preset create name.
@@ -271,14 +272,14 @@ public class PresetCommand extends PKCommand {
 
 			final int limit = GeneralMethods.getMaxPresets(target);
 			if (name == null || name.matches(INVALID_NAME)) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidName);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.invalidName);
 				return;
 			}
 			if (Preset.presets.get(target.getUniqueId()) != null && Preset.presets.get(target.getUniqueId()).size() >= limit) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.reachedMax);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.reachedMax);
 				return;
 			} else if (Preset.presetExists(target, name)) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.alreadyExists);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.alreadyExists);
 				return;
 			}
 
@@ -291,9 +292,9 @@ public class PresetCommand extends PKCommand {
 			final String finalName = name;
 			preset.save(target).thenAccept(b -> {
 				if (b) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + this.createdNewPreset.replace("{name}", ChatColor.YELLOW + finalName + ChatColor.GREEN));
+					ChatUtil.sendBrandingMessage(sender, "&a" + this.createdNewPreset.replace("{name}", "&e" + finalName + "&a"));
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.databaseError.replace("{name}", ChatColor.YELLOW + finalName + ChatColor.RED));
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.databaseError.replace("{name}", "&e" + finalName + "&c"));
 				}
 			});
 		} else if (Arrays.asList(exportaliases).contains(args.get(0)) && this.hasPermission(sender, "export")) { // bending preset export name.
@@ -301,13 +302,13 @@ public class PresetCommand extends PKCommand {
 			Player player = (Player) sender;
 
 			if (args.size() < 2) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.exportNotSpecified);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.exportNotSpecified);
 				return;
 			}
 
 			name = args.get(1);
 			if (!Preset.presetExists(player, name)) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noPresetName);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.noPresetName);
 				return;
 			}
 
@@ -315,27 +316,19 @@ public class PresetCommand extends PKCommand {
 			String exportCode = preset.exportToString();
 			if (exportCode != null) {
 				String message = this.exportSuccess
-						.replace("{name}", ChatColor.YELLOW + name + ChatColor.GREEN)
-						.replace("{code}", ChatColor.AQUA + exportCode + ChatColor.GREEN);
-				ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + message);
-				TextComponent copyComponent = new TextComponent(this.exportCodeButton);
-				copyComponent.setColor(ChatColor.AQUA.asBungee());
-				copyComponent.setClickEvent(new ClickEvent(
-						ClickEvent.Action.COPY_TO_CLIPBOARD, exportCode));
-				copyComponent.setHoverEvent(new HoverEvent(
-						HoverEvent.Action.SHOW_TEXT,
-						new ComponentBuilder(this.exportHoverCode.replace("{code}", exportCode)).color(ChatColor.YELLOW.asBungee()).create()));
+						.replace("{name}", "&e" + name + "&a")
+						.replace("{code}", "&b" + exportCode + "&a");
+				ChatUtil.sendBrandingMessage(sender, "&a" + message);
+				final Component copyComponent = ChatUtil.legacy(this.exportCodeButton).colorIfAbsent(NamedTextColor.AQUA)
+						.clickEvent(ClickEvent.copyToClipboard(exportCode))
+						.hoverEvent(HoverEvent.showText(ChatUtil.legacy(this.exportHoverCode.replace("{code}", exportCode)).colorIfAbsent(NamedTextColor.YELLOW)));
 				ChatUtil.sendBrandingMessage(sender, copyComponent);
-				TextComponent copyImportComponent = new TextComponent(this.exportCommandButton);
-				copyImportComponent.setColor(ChatColor.AQUA.asBungee());
-				copyImportComponent.setClickEvent(new ClickEvent(
-						ClickEvent.Action.COPY_TO_CLIPBOARD, "/bending preset import " + exportCode));
-				copyImportComponent.setHoverEvent(new HoverEvent(
-						HoverEvent.Action.SHOW_TEXT,
-						new ComponentBuilder(this.exportHoverCommand).color(ChatColor.YELLOW.asBungee()).create()));
+				final Component copyImportComponent = ChatUtil.legacy(this.exportCommandButton).colorIfAbsent(NamedTextColor.AQUA)
+						.clickEvent(ClickEvent.copyToClipboard("/bending preset import " + exportCode))
+						.hoverEvent(HoverEvent.showText(ChatUtil.legacy(this.exportHoverCommand).colorIfAbsent(NamedTextColor.YELLOW)));
 				ChatUtil.sendBrandingMessage(sender, copyImportComponent);
 			} else {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.exportFailed);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.exportFailed);
 			}
 		}
 		else if (Arrays.asList(importaliases).contains(args.get(0)) && this.hasPermission(sender, "import")) { // bending preset import key.
@@ -343,7 +336,7 @@ public class PresetCommand extends PKCommand {
 			Player player = (Player) sender;
 
 			if (args.size() < 2) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.importNotSpecified);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.importNotSpecified);
 				return;
 			}
 
@@ -351,24 +344,24 @@ public class PresetCommand extends PKCommand {
 			Preset importedPreset = Preset.importFromString(player, importCode);
 
 			if (importedPreset == null) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.importFailed);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.importFailed);
 				return;
 			}
 
 			int limit = GeneralMethods.getMaxPresets(player);
 			if (Preset.presets.get(player.getUniqueId()) != null &&
 					Preset.presets.get(player.getUniqueId()).size() >= limit) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.reachedMax);
+				ChatUtil.sendBrandingMessage(sender, "&c" + this.reachedMax);
 				return;
 			}
 
 			importedPreset.save(player).thenAccept(b -> {
 				if (b) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + this.importSuccess
-							.replace("{name}", ChatColor.YELLOW + importedPreset.getName() + ChatColor.GREEN));
+					ChatUtil.sendBrandingMessage(sender, "&a" + this.importSuccess
+							.replace("{name}", "&e" + importedPreset.getName() + "&a"));
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.databaseError
-							.replace("{name}", ChatColor.YELLOW + importedPreset.getName() + ChatColor.RED));
+					ChatUtil.sendBrandingMessage(sender, "&c" + this.databaseError
+							.replace("{name}", "&e" + importedPreset.getName() + "&c"));
 				}
 			});
 		} else {
@@ -376,9 +369,35 @@ public class PresetCommand extends PKCommand {
 		}
 	}
 
+	/**
+	 * Players are given the permissions of the individual sub commands rather than bending.command.preset
+	 */
+	@Override
+	public boolean canUse(final CommandSender sender) {
+		if (super.canUse(sender)) {
+			return true;
+		}
+		for (final String sub : new String[] { "list", "create", "delete", "bind", "export", "import" }) {
+			if (sender.hasPermission("bending.command.preset." + sub)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		this.literals(node, listaliases, list -> list.then(this.word("pageOrPlayer").then(this.word("page")))); // list [page] or list <player> <page>
+		this.literals(node, deletealiases, delete -> delete.then(this.word("preset").then(this.word("player"))));
+		this.literals(node, bindaliases, bind -> bind.then(this.word("preset").then(this.word("player"))));
+		this.literals(node, createaliases, create -> create.then(this.word("preset")));
+		this.literals(node, exportaliases, export -> export.then(this.word("preset")));
+		this.literals(node, importaliases, imp -> imp.then(this.greedy("code"))); // Base64, so it can contain '/', '+' and '='
+	}
+
 	@Override
 	protected List<String> getTabCompletion(final CommandSender sender, final List<String> args) {
-		if (args.size() >= 3 || !sender.hasPermission("bending.command.preset") || !(sender instanceof Player)) {
+		if (args.size() >= 3 || !this.canUse(sender) || !(sender instanceof Player)) {
 			return new ArrayList<>();
 		}
 		final List<String> l = new ArrayList<>();

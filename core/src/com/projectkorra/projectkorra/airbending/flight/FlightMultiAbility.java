@@ -10,7 +10,6 @@ import java.util.UUID;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
 import com.projectkorra.projectkorra.util.ChatUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Entity;
@@ -173,14 +172,14 @@ public class FlightMultiAbility extends FlightAbility implements MultiAbility {
 			if (p2 == null) {
 				requestedMap.remove(this.player.getUniqueId());
 				requestTime.remove(this.player.getUniqueId());
-				this.player.sendMessage(ChatColor.RED + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.RequestedPlayerNoLongerFound"));
+				this.player.sendMessage(ChatUtil.legacy("&c" + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.RequestedPlayerNoLongerFound")));
 			} else {
 				if (requestTime.get(this.player.getUniqueId()) + 15000 > System.currentTimeMillis()) {
 					final long start = System.currentTimeMillis();
 					new BukkitRunnable() {
 						@Override
 						public void run() {
-							ChatUtil.sendActionBar(ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.PlayerRequest").replace("{target}", ChatColor.WHITE + FlightMultiAbility.this.player.getName() + ChatColor.GREEN), p2);
+							ChatUtil.sendActionBar(ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.PlayerRequest").replace("{target}", "&f" + FlightMultiAbility.this.player.getName() + "&a"), p2);
 							if (System.currentTimeMillis() >= start + 300) {
 								this.cancel();
 							}
@@ -274,13 +273,13 @@ public class FlightMultiAbility extends FlightAbility implements MultiAbility {
 
 	private String speed() {
 		if (this.speed >= this.fastSpeed - 0.3) {
-			return ChatColor.RED + "FAST";
+			return "&cFAST";
 		} else if (this.speed >= this.baseSpeed - 0.3) {
-			return ChatColor.GREEN + "NORMAL";
+			return "&aNORMAL";
 		} else if (this.speed >= 0) {
-			return ChatColor.YELLOW + "SLOW";
+			return "&eSLOW";
 		} else {
-			return ChatColor.WHITE + "ERROR";
+			return "&fERROR";
 		}
 	}
 
@@ -296,26 +295,26 @@ public class FlightMultiAbility extends FlightAbility implements MultiAbility {
 
 	public void requestCarry(final Player p2) {
 		if (this.mode != FlightMode.LEVITATE) {
-			this.player.sendMessage(ChatColor.RED + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.OnlyRequestLevitating"));
+			this.player.sendMessage(ChatUtil.legacy("&c" + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.OnlyRequestLevitating")));
 			return;
 		}
 		if (!this.player.getPassengers().isEmpty()) {
-			this.player.sendMessage(ChatColor.RED + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.AlreadyHavePassenger"));
+			this.player.sendMessage(ChatUtil.legacy("&c" + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.AlreadyHavePassenger")));
 			return;
 		}
 		if (flying.contains(p2.getUniqueId())) {
-			this.player.sendMessage(ChatColor.RED + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.CannotRequestAlreadyFlyingPlayer"));
+			this.player.sendMessage(ChatUtil.legacy("&c" + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.CannotRequestAlreadyFlyingPlayer")));
 			return;
 		}
 		if (requestedMap.containsKey(this.player.getUniqueId())) {
 			if (requestedMap.get(this.player.getUniqueId()).equals(p2.getUniqueId())) {
-				this.player.sendMessage(ChatColor.RED + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.CarryAlreadyRequest"));
+				this.player.sendMessage(ChatUtil.legacy("&c" + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.CarryAlreadyRequest")));
 				return;
 			}
 		}
 		requestedMap.put(this.player.getUniqueId(), p2.getUniqueId());
 		requestTime.put(this.player.getUniqueId(), System.currentTimeMillis());
-		this.player.sendMessage(ChatColor.GREEN + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.PassengerRequest").replace("{target}", ChatColor.WHITE + p2.getName()));
+		this.player.sendMessage(ChatUtil.legacy("&a" + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.PassengerRequest").replace("{target}", "&f" + p2.getName())));
 	}
 
 	@Override
@@ -354,7 +353,7 @@ public class FlightMultiAbility extends FlightAbility implements MultiAbility {
 		new BukkitRunnable() {
 			@Override
 			public void run() {
-				ChatUtil.sendActionBar(ChatColor.AQUA + "Flight speed: " + FlightMultiAbility.this.speed(), FlightMultiAbility.this.player);
+				ChatUtil.sendActionBar("&bFlight speed: " + FlightMultiAbility.this.speed(), FlightMultiAbility.this.player);
 				if (System.currentTimeMillis() >= start + 1000) {
 					this.cancel();
 				}
@@ -368,7 +367,7 @@ public class FlightMultiAbility extends FlightAbility implements MultiAbility {
 			new BukkitRunnable() {
 				@Override
 				public void run() {
-					ChatUtil.sendActionBar(ChatColor.RED + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.FlightCancelledReason").replace("{reason}", reason), FlightMultiAbility.this.player);
+					ChatUtil.sendActionBar("&c" + ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.FlightCancelledReason").replace("{reason}", reason), FlightMultiAbility.this.player);
 					if (System.currentTimeMillis() >= start + 1000) {
 						this.cancel();
 					}
@@ -387,7 +386,7 @@ public class FlightMultiAbility extends FlightAbility implements MultiAbility {
 		if (!requestedCarry(requested, requester)) {
 			return;
 		}
-		requester.sendMessage(ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.CarryRequestAccepted").replace("{target}", ChatColor.WHITE + requested.getName() + ChatColor.GREEN));
+		requester.sendMessage(ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Abilities.Air.Flight.CarryRequestAccepted").replace("{target}", "&f" + requested.getName() + "&a")));
 		requestedMap.remove(requester.getUniqueId());
 		requestTime.remove(requester.getUniqueId());
 		requester.addPassenger(requested);

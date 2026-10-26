@@ -10,8 +10,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.projectkorra.projectkorra.util.ChatUtil;
-import org.bukkit.ChatColor;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -87,7 +88,7 @@ public class StatsCommand extends PKCommand {
 				}
 			}
 			final String message = this.getTarget(object, statistic, target);
-			ChatUtil.sendBrandingMessage(sender, ChatColor.translateAlternateColorCodes('&', message));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(message));
 		} else if (containsLeaderboard) {
 			int page = 1;
 			try {
@@ -100,11 +101,27 @@ public class StatsCommand extends PKCommand {
 				public void run() {
 					final List<String> messages = StatsCommand.this.getLeaderboard(sender, o, statistic, p);
 					for (final String message : messages) {
-						sender.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
+						sender.sendMessage(ChatUtil.legacy(message));
 					}
 				}
 			}.runTaskAsynchronously(ProjectKorra.plugin);
 		}
+	}
+
+	/**
+	 * Stats has no permission node, so anyone can use it
+	 */
+	@Override
+	public boolean canUse(final CommandSender sender) {
+		return true;
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		final String[] lookups = new String[getaliases.length + leaderboardaliases.length];
+		System.arraycopy(getaliases, 0, lookups, 0, getaliases.length);
+		System.arraycopy(leaderboardaliases, 0, lookups, getaliases.length, leaderboardaliases.length);
+		this.literals(node, lookups, lookup -> lookup.then(this.word("type").then(this.word("statistic").then(this.word("target")))));
 	}
 
 	public boolean contains(final String s, final List<String> l) {
@@ -152,7 +169,7 @@ public class StatsCommand extends PKCommand {
 		} else {
 			title = title.replace("%object%", "Total");
 		}
-		ChatUtil.sendBrandingMessage(sender, ChatColor.translateAlternateColorCodes('&', "&8- &f" + title + " &8- [&7" + p + "/" + maxPage + "&8]"));
+		ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&8- &f" + title + " &8- [&7" + p + "/" + maxPage + "&8]"));
 		final int maxIndex = (10 * p) - 1;
 		final int minIndex = maxIndex - 9;
 		try {

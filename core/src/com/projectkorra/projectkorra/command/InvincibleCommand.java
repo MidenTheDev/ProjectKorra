@@ -3,7 +3,9 @@ package com.projectkorra.projectkorra.command;
 import java.util.List;
 
 import com.projectkorra.projectkorra.util.ChatUtil;
-import org.bukkit.ChatColor;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 
 import com.projectkorra.projectkorra.configuration.ConfigManager;
@@ -26,11 +28,15 @@ public class InvincibleCommand extends PKCommand {
 
 		if (!Commands.invincible.contains(sender.getName())) {
 			Commands.invincible.add(sender.getName());
-			ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + ConfigManager.languageConfig.get().getString("Commands.Invincible.ToggledOn"));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Invincible.ToggledOn")).colorIfAbsent(NamedTextColor.GREEN));
 		} else {
 			Commands.invincible.remove(sender.getName());
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Invincible.ToggledOff"));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Invincible.ToggledOff")).colorIfAbsent(NamedTextColor.RED));
 		}
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
 	}
 
 }

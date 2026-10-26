@@ -127,7 +127,7 @@ public abstract class AirAbility extends ElementalAbility {
 			case "ItemStack" -> new ItemStack(Material.WHITE_WOOL);
 			case "Spell" -> new Particle.Spell(Color.WHITE, 1.0f);
 			case "Trail" -> new Particle.Trail(loc, Color.WHITE, 1);
-			case "Vibration" -> new Vibration(loc, new Vibration.Destination.BlockDestination(loc.getBlock()), 0);
+			case "Vibration" -> new Vibration(new Vibration.Destination.BlockDestination(loc.getBlock()), 0);
 			default -> null;
 		};
 		loc.getWorld().spawnParticle(getAirbendingParticles(), loc, amount, xOffset, yOffset, zOffset, 0, particleData, true);
@@ -146,7 +146,7 @@ public abstract class AirAbility extends ElementalAbility {
 			Sound sound = Sound.ENTITY_CREEPER_HURT;
 
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Air.Sound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Air.Sound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Air.Sound.Sound' is not valid.");
 			} finally {

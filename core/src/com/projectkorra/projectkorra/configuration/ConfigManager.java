@@ -1,7 +1,9 @@
 package com.projectkorra.projectkorra.configuration;
 
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+
 import com.projectkorra.projectkorra.Element;
-import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -60,31 +62,31 @@ public class ConfigManager {
 
 			config.addDefault("Chat.Enable", !hasChatPlugin());
 			config.addDefault("Chat.Format", "<name>: <message>");
-			config.addDefault("Chat.Colors.Avatar", ChatColor.DARK_PURPLE.getName());
-			config.addDefault("Chat.Colors.Air", ChatColor.GRAY.getName());
-			config.addDefault("Chat.Colors.AirSub", ChatColor.DARK_GRAY.getName());
+			config.addDefault("Chat.Colors.Avatar", "dark_purple");
+			config.addDefault("Chat.Colors.Air", "gray");
+			config.addDefault("Chat.Colors.AirSub", "dark_gray");
 			config.addDefault("Chat.Colors.Spiritual", "#cab0ff");
 			config.addDefault("Chat.Colors.Flight", "#dbf5ff");
-			config.addDefault("Chat.Colors.Water", ChatColor.AQUA.getName());
-			config.addDefault("Chat.Colors.WaterSub", ChatColor.DARK_AQUA.getName());
+			config.addDefault("Chat.Colors.Water", "aqua");
+			config.addDefault("Chat.Colors.WaterSub", "dark_aqua");
 			config.addDefault("Chat.Colors.Blood", "#a30010");
 			config.addDefault("Chat.Colors.Ice", "#99f5ff");
 			config.addDefault("Chat.Colors.Plant", "#008048");
 			config.addDefault("Chat.Colors.Healing", "#36d2e3");
-			config.addDefault("Chat.Colors.Earth", ChatColor.GREEN.getName());
-			config.addDefault("Chat.Colors.EarthSub", ChatColor.DARK_GREEN.getName());
+			config.addDefault("Chat.Colors.Earth", "green");
+			config.addDefault("Chat.Colors.EarthSub", "dark_green");
 			config.addDefault("Chat.Colors.Lava", "#c73800");
 			config.addDefault("Chat.Colors.Metal", "#c7c5c5");
 			config.addDefault("Chat.Colors.Sand", "#ffdc82");
-			config.addDefault("Chat.Colors.Fire", ChatColor.RED.getName());
-			config.addDefault("Chat.Colors.FireSub", ChatColor.DARK_RED.getName());
+			config.addDefault("Chat.Colors.Fire", "red");
+			config.addDefault("Chat.Colors.FireSub", "dark_red");
 			config.addDefault("Chat.Colors.BlueFire", "#1ac5fd");
 			config.addDefault("Chat.Colors.Combustion", "#690213");
 			config.addDefault("Chat.Colors.Lightning", "#820d0d");
-			config.addDefault("Chat.Colors.Chi", ChatColor.GOLD.getName());
-			config.addDefault("Chat.Colors.ChiSub", ChatColor.YELLOW.getName());
+			config.addDefault("Chat.Colors.Chi", "gold");
+			config.addDefault("Chat.Colors.ChiSub", "yellow");
 			config.addDefault("Chat.Branding.JoinMessage.Enabled", true);
-			config.addDefault("Chat.Branding.Color", ChatColor.GOLD.getName());
+			config.addDefault("Chat.Branding.Color", "gold");
 			config.addDefault("Chat.Branding.Borders.TopBorder", "");
 			config.addDefault("Chat.Branding.Borders.BottomBorder", "");
 			config.addDefault("Chat.Branding.ChatPrefix.Prefix", "");
@@ -103,16 +105,16 @@ public class ConfigManager {
 
 			config.addDefault("Board.Title", "&lAbilities");
 			config.addDefault("Board.Prefix.Text", "> ");
-			config.addDefault("Board.Prefix.SelectedColor", ChatColor.WHITE.getName());
-			config.addDefault("Board.Prefix.NonSelectedColor", ChatColor.DARK_GRAY.getName());
+			config.addDefault("Board.Prefix.SelectedColor", "white");
+			config.addDefault("Board.Prefix.NonSelectedColor", "dark_gray");
 			config.addDefault("Board.EmptySlot", "&8-- Slot {slot_number} --");
 			config.addDefault("Board.MiscSeparator", "  ----------");
 
 			if (!config.contains("Board.Extras")) {
-				config.addDefault("Board.Extras.RaiseEarthWall", Element.EARTH.getColor().getName());
-				config.addDefault("Board.Extras.SurgeWave", Element.WATER.getColor().getName());
-				config.addDefault("Board.Extras.SpoutHop", Element.WATER.getColor().getName());
-				config.addDefault("Board.Extras.IceSpikeField", Element.ICE.getColor().getName());
+				config.addDefault("Board.Extras.RaiseEarthWall", colorName(Element.EARTH.getTextColor()));
+				config.addDefault("Board.Extras.SurgeWave", colorName(Element.WATER.getTextColor()));
+				config.addDefault("Board.Extras.SpoutHop", colorName(Element.WATER.getTextColor()));
+				config.addDefault("Board.Extras.IceSpikeField", colorName(Element.ICE.getTextColor()));
 			}
 
 			config.addDefault("Extras.Water.NightMessage", "Your waterbending has become empowered due to the moon rising.");
@@ -2063,5 +2065,12 @@ public class ConfigManager {
 		//Save both configs
 		ConfigManager.defaultConfig.save();
 		ConfigManager.avatarStateConfig.save();
+	}
+
+	/**
+	 * @return The name a color is written to the config with, e.g. "green" or "#00FF00"
+	 */
+	private static String colorName(final TextColor color) {
+		return color instanceof NamedTextColor named ? named.toString() : color.asHexString();
 	}
 }

@@ -16,7 +16,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 
 import java.sql.ResultSet;
@@ -631,7 +630,7 @@ public class OfflineBendingPlayer {
     public void bindAbility(final String ability, final int slot) {
         boolean realPlayer = this instanceof BendingPlayer;
         if (realPlayer && MultiAbilityManager.playerAbilities.containsKey((Player)this.getPlayer())) {
-            ChatUtil.sendBrandingMessage((Player)this.getPlayer(), ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Bind.CantEditBinds"));
+            ChatUtil.sendBrandingMessage((Player)this.getPlayer(), "&c" + ConfigManager.languageConfig.get().getString("Commands.Bind.CantEditBinds"));
             return;
         }
 
@@ -648,7 +647,7 @@ public class OfflineBendingPlayer {
         this.getAbilities().put(slot, fixedName);
 
         if (realPlayer) {
-            ChatUtil.sendBrandingMessage((Player)this.getPlayer(), coreAbil.getElement().getColor() + ConfigManager.languageConfig.get().getString("Commands.Bind.SuccessfullyBound").replace("{ability}", fixedName).replace("{slot}", String.valueOf(slot)));
+            ChatUtil.sendBrandingMessage((Player)this.getPlayer(), ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Bind.SuccessfullyBound").replace("{ability}", fixedName).replace("{slot}", String.valueOf(slot))).colorIfAbsent(coreAbil.getElement().getTextColor()));
         }
 
         this.saveAbility(fixedName, slot);

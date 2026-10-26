@@ -53,7 +53,8 @@ import com.projectkorra.projectkorra.waterbending.WaterSpout;
 import com.projectkorra.projectkorra.waterbending.blood.Bloodbending;
 import com.projectkorra.projectkorra.waterbending.util.WaterbendingManager;
 import io.lumine.mythic.lib.UtilityMethods;
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -100,6 +101,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -688,6 +690,32 @@ public class GeneralMethods {
 	}
 
 	/**
+	 * Looks up a sound by its registry key (e.g. "entity.firework_rocket.blast")
+	 * or by its legacy constant name (e.g. "ENTITY_FIREWORK_ROCKET_BLAST").
+	 *
+	 * @param name The sound name from the config
+	 * @return the matching sound
+	 * @throws IllegalArgumentException if no sound matches
+	 */
+	public static Sound getSound(final String name) {
+		if (name == null) {
+			throw new IllegalArgumentException("Sound name cannot be null");
+		}
+		final NamespacedKey key = NamespacedKey.fromString(name.toLowerCase(Locale.ROOT));
+		Sound sound = key == null ? null : Registry.SOUND_EVENT.get(key);
+		if (sound == null) {
+			try {
+				sound = (Sound) Sound.class.getField(name.toUpperCase(Locale.ROOT)).get(null);
+			} catch (final ReflectiveOperationException ignored) {
+			}
+		}
+		if (sound == null) {
+			throw new IllegalArgumentException("Unknown sound: " + name);
+		}
+		return sound;
+	}
+
+	/**
 	 * Returns a location with a specified distance away from the right side of
 	 * a location.
 	 *
@@ -1080,7 +1108,7 @@ public class GeneralMethods {
 		final BendingReloadEvent event = new BendingReloadEvent(sender);
 		Bukkit.getServer().getPluginManager().callEvent(event);
 		if (event.isCancelled()) {
-			sender.sendMessage(ChatColor.RED + "Reload event cancelled");
+			sender.sendMessage(Component.text("Reload event cancelled", NamedTextColor.RED));
 			return;
 		}
 		if (DBConnection.isOpen()) {
@@ -1242,20 +1270,20 @@ public class GeneralMethods {
 		f.add("");
 		f.add("ProjectKorra (Core) Information");
 		f.add("====================");
-		f.add("Version: " + plugin.getDescription().getVersion());
-		f.add("Author: " + plugin.getDescription().getAuthors());
+		f.add("Version: " + plugin.getPluginMeta().getVersion());
+		f.add("Author: " + plugin.getPluginMeta().getAuthors());
 		final List<String> officialSidePlugins = new ArrayList<>();
 		if (hasRPG()) {
-			officialSidePlugins.add("- ProjectKorra RPG v" + getRPG().getDescription().getVersion());
+			officialSidePlugins.add("- ProjectKorra RPG v" + getRPG().getPluginMeta().getVersion());
 		}
 		if (hasItems()) {
-			officialSidePlugins.add("- ProjectKorra Items v" + getItems().getDescription().getVersion());
+			officialSidePlugins.add("- ProjectKorra Items v" + getItems().getPluginMeta().getVersion());
 		}
 		if (hasSpirits()) {
-			officialSidePlugins.add("- ProjectKorra Spirits v" + getSpirits().getDescription().getVersion());
+			officialSidePlugins.add("- ProjectKorra Spirits v" + getSpirits().getPluginMeta().getVersion());
 		}
 		if (hasProbending()) {
-			officialSidePlugins.add("- Probending v" + getProbending().getDescription().getVersion());
+			officialSidePlugins.add("- Probending v" + getProbending().getPluginMeta().getVersion());
 		}
 		if (!officialSidePlugins.isEmpty()) {
 			f.add("");
@@ -1270,13 +1298,13 @@ public class GeneralMethods {
 
 		for (JavaPlugin plugin : RegionProtection.getActiveProtections().keySet()) {
 			if (plugin.isEnabled()) {
-				f.add("- " + plugin.getName() + " v" + plugin.getDescription().getVersion());
+				f.add("- " + plugin.getName() + " v" + plugin.getPluginMeta().getVersion());
 			}
 		}
 
 		Plugin papi = Bukkit.getPluginManager().getPlugin("PlaceholderAPI");
 		if (papi != null && papi.isEnabled()) {
-			f.add("- " + papi.getName() + " v" + papi.getDescription().getVersion());
+			f.add("- " + papi.getName() + " v" + papi.getPluginMeta().getVersion());
 		}
 
 		f.add("");
@@ -1285,8 +1313,8 @@ public class GeneralMethods {
 
 		final String[] pkPlugins = new String[] { "projectkorrarpg", "projectkorraitems", "projectkorraspirits", "probending" };
 		for (final Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
-			if (plugin.getDescription().getDepend().contains("ProjectKorra") && !Arrays.asList(pkPlugins).contains(plugin.getName().toLowerCase())) {
-				f.add("- " + plugin.getDescription().getName() + " v" + plugin.getDescription().getVersion());
+			if (plugin.getPluginMeta().getPluginDependencies().contains("ProjectKorra") && !Arrays.asList(pkPlugins).contains(plugin.getName().toLowerCase())) {
+				f.add("- " + plugin.getPluginMeta().getName() + " v" + plugin.getPluginMeta().getVersion());
 			}
 		}
 
@@ -1300,9 +1328,9 @@ public class GeneralMethods {
 				stockAbils.add(ability.getName());
 			} else {
 				if (ability instanceof AddonAbility) {
-					unofficialAbils.add(ChatColor.stripColor(ability.getName() + " v" + ((AddonAbility) ability).getVersion() + " (" + ((AddonAbility) ability).getAuthor() + ")"));
+					unofficialAbils.add(ChatUtil.stripColor(ability.getName() + " v" + ((AddonAbility) ability).getVersion() + " (" + ((AddonAbility) ability).getAuthor() + ")"));
 				} else {
-					unofficialAbils.add(ChatColor.stripColor(ability.getName() + " (" + ability.getClass().getName() + ")"));
+					unofficialAbils.add(ChatUtil.stripColor(ability.getName() + " (" + ability.getClass().getName() + ")"));
 				}
 			}
 		}

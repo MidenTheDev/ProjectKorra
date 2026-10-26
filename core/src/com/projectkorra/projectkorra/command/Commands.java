@@ -6,8 +6,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.PluginCommand;
+import java.util.concurrent.CompletableFuture;
+
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import org.bukkit.command.CommandSender;
 
 import com.projectkorra.projectkorra.ProjectKorra;
 
@@ -72,33 +82,92 @@ public class Commands {
 	public static String[] commandaliases = { "b", "pk", "projectkorra", "bending", "mtla", "tla", "korra", "bend" };
 
 	private void init() {
-		final PluginCommand projectkorra = this.plugin.getCommand("projectkorra");
-
 		/**
 		 * Set of all of the Classes which extend Command
 		 */
 		initializeCommands();
 
-		final CommandExecutor exe = (s, c, label, args) -> {
-			if (Arrays.asList(commandaliases).contains(label.toLowerCase())) {
-				if (args.length > 0) {
-					final List<String> sendingArgs = Arrays.asList(args).subList(1, args.length);
-					for (final PKCommand command : PKCommand.instances.values()) {
-						if (Arrays.asList(command.getAliases()).contains(args[0].toLowerCase())) {
-							command.execute(s, sendingArgs);
-							return true;
-						}
-					}
+		this.plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+			final List<String> aliases = new ArrayList<>(Arrays.asList(commandaliases));
+			aliases.remove("projectkorra");
+			event.registrar().register(buildRoot(), "The ProjectKorra bending command", aliases);
+		});
+	}
+
+	/**
+	 * Builds the Brigadier tree for /projectkorra. Every command registered so far gets its own typed node.
+	 * Anything else (including addon commands registered after the tree was built) goes through a catch-all
+	 * argument that dispatches the same way the old Bukkit command did.
+	 */
+	private static LiteralCommandNode<CommandSourceStack> buildRoot() {
+		final LiteralArgumentBuilder<CommandSourceStack> root = io.papermc.paper.command.brigadier.Commands.literal("projectkorra")
+				.executes(context -> {
+					PKCommand.instances.get("help").execute(PKCommand.sender(context.getSource()), new ArrayList<>());
+					return Command.SINGLE_SUCCESS;
+				});
+
+		final Set<String> registered = new HashSet<>();
+		for (final PKCommand command : PKCommand.instances.values()) {
+			for (final String alias : command.getAliases()) {
+				if (registered.add(alias.toLowerCase())) {
+					root.then(command.createNode(alias.toLowerCase()));
+				} else {
+					ProjectKorra.log.warning("The command alias '" + alias + "' of /bending " + command.getName() + " is already used by another command.");
 				}
-
-				PKCommand.instances.get("help").execute(s, new ArrayList<String>());
-				return true;
 			}
+		}
 
-			return false;
-		};
-		projectkorra.setExecutor(exe);
-		projectkorra.setTabCompleter(new BendingTabComplete());
+		root.then(io.papermc.paper.command.brigadier.Commands.argument("args", StringArgumentType.greedyString())
+				.suggests(Commands::suggestFallback)
+				.executes(context -> {
+					dispatch(PKCommand.sender(context.getSource()), PKCommand.split(StringArgumentType.getString(context, "args")));
+					return Command.SINGLE_SUCCESS;
+				}));
+		return root.build();
+	}
+
+	/**
+	 * Runs the sub command named by the first argument, or shows the help if there is none
+	 */
+	private static void dispatch(final CommandSender sender, final List<String> args) {
+		if (!args.isEmpty()) {
+			final PKCommand command = getCommand(args.getFirst());
+			if (command != null) {
+				command.execute(sender, args.subList(1, args.size()));
+				return;
+			}
+		}
+		PKCommand.instances.get("help").execute(sender, new ArrayList<>());
+	}
+
+	/**
+	 * Suggestions for the catch-all argument, matching the old tab completer
+	 */
+	private static CompletableFuture<Suggestions> suggestFallback(final CommandContext<CommandSourceStack> context, final SuggestionsBuilder builder) {
+		final CommandSender sender = PKCommand.sender(context.getSource());
+		final String remaining = builder.getRemaining();
+		final String[] args = remaining.split(" ", -1);
+		final SuggestionsBuilder offset = builder.createOffset(builder.getStart() + remaining.lastIndexOf(' ') + 1);
+
+		if (args.length == 1) {
+			BendingTabComplete.getPossibleCompletions(args, BendingTabComplete.getCommandsForUser(sender)).forEach(offset::suggest);
+		} else {
+			final PKCommand command = getCommand(args[0]);
+			if (command != null && command.canUse(sender)) {
+				final List<String> previous = PKCommand.split(String.join(" ", Arrays.copyOfRange(args, 1, args.length - 1)));
+				BendingTabComplete.getPossibleCompletions(args, command.getTabCompletion(sender, previous)).forEach(offset::suggest);
+			}
+		}
+		return offset.buildFuture();
+	}
+
+	private static PKCommand getCommand(final String alias) {
+		for (final PKCommand command : PKCommand.instances.values()) {
+			if (Arrays.asList(command.getAliases()).contains(alias.toLowerCase())) {
+				return command;
+			}
+		}
+		return null;
 	}
 
 	/**

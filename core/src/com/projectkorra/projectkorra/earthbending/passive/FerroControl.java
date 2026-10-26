@@ -58,7 +58,7 @@ public class FerroControl extends MetalAbility implements PassiveAbility {
 
 		if (used) {
 			final String sound = "BLOCK_IRON_" + (tDoor ? "TRAP" : "") + "DOOR_" + (open ? "OPEN" : "CLOSE");
-			this.block.getWorld().playSound(this.block.getLocation(), Sound.valueOf(sound), 0.5f, 0);
+			this.block.getWorld().playSound(this.block.getLocation(), GeneralMethods.getSound(sound), 0.5f, 0);
 			this.bPlayer.addCooldown(this, 200);
 		}
 		this.remove();

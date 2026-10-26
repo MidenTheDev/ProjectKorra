@@ -16,6 +16,7 @@ import com.projectkorra.projectkorra.util.TempBlock;
 import com.projectkorra.projectkorra.waterbending.multiabilities.WaterArmsWhip.Whip;
 import com.projectkorra.projectkorra.waterbending.plant.PlantRegrowth;
 import com.projectkorra.projectkorra.waterbending.util.WaterReturn;
+import com.projectkorra.projectkorra.util.ChatUtil;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -150,7 +151,7 @@ public class WaterArms extends WaterAbility {
 			this.start();
 			MultiAbilityManager.bindMultiAbility(player, "WaterArms");
 
-			if (ChatColor.stripColor(this.bPlayer.getBoundAbilityName()) == null) {
+			if (ChatUtil.stripColor(this.bPlayer.getBoundAbilityName()) == null) {
 				this.remove();
 				return;
 			}
@@ -455,7 +456,7 @@ public class WaterArms extends WaterAbility {
 	public void displayBoundMsg(final int slot) {
 		final String name = this.bPlayer.getAbilities().get(slot);
 		if (name != null) {
-			this.player.sendMessage(this.getElement().getColor() + this.sneakMsg + " " + name);
+			this.player.sendMessage(ChatUtil.legacy(this.sneakMsg + " " + name).colorIfAbsent(this.getElement().getTextColor()));
 		}
 	}
 

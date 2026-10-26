@@ -2,11 +2,15 @@ package com.projectkorra.projectkorra.command;
 
 import java.util.List;
 
-import org.bukkit.ChatColor;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 
 import com.projectkorra.projectkorra.ProjectKorra;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
+import com.projectkorra.projectkorra.util.ChatUtil;
 
 /**
  * Executor for /bending check. Extends {@link PKCommand}.
@@ -36,14 +40,22 @@ public class CheckCommand extends PKCommand {
 			return;
 		}
 		if (!ProjectKorra.plugin.updater.isEnabled()) {
-			sender.sendMessage(ChatColor.YELLOW + "The update checker has been disabled in the config. Please enable it in order to use this command.");
+			sender.sendMessage(Component.text("The update checker has been disabled in the config. Please enable it in order to use this command.", NamedTextColor.YELLOW));
 		} else if (ProjectKorra.plugin.updater.updateAvailable()) {
-			sender.sendMessage(ChatColor.GREEN + this.newVersionAvailable.replace("ProjectKorra", ChatColor.GOLD + "ProjectKorra" + ChatColor.GREEN));
-			sender.sendMessage(ChatColor.YELLOW + this.curVersion.replace("{version}", ChatColor.RED + ProjectKorra.plugin.updater.getCurrentVersion() + ChatColor.YELLOW));
-			sender.sendMessage(ChatColor.YELLOW + this.newVersion.replace("{version}", ChatColor.GOLD + ProjectKorra.plugin.updater.getUpdateVersion() + ChatColor.YELLOW));
+			sender.sendMessage(replace(ChatUtil.legacy(this.newVersionAvailable), "ProjectKorra", Component.text("ProjectKorra", NamedTextColor.GOLD)).colorIfAbsent(NamedTextColor.GREEN));
+			sender.sendMessage(replace(ChatUtil.legacy(this.curVersion), "{version}", Component.text(ProjectKorra.plugin.updater.getCurrentVersion(), NamedTextColor.RED)).colorIfAbsent(NamedTextColor.YELLOW));
+			sender.sendMessage(replace(ChatUtil.legacy(this.newVersion), "{version}", Component.text(ProjectKorra.plugin.updater.getUpdateVersion(), NamedTextColor.GOLD)).colorIfAbsent(NamedTextColor.YELLOW));
 		} else {
-			sender.sendMessage(ChatColor.YELLOW + this.upToDate.replace("ProjectKorra", ChatColor.GOLD + "ProjectKorra" + ChatColor.YELLOW));
+			sender.sendMessage(replace(ChatUtil.legacy(this.upToDate), "ProjectKorra", Component.text("ProjectKorra", NamedTextColor.GOLD)).colorIfAbsent(NamedTextColor.YELLOW));
 		}
+	}
+
+	private static Component replace(final Component component, final String placeholder, final Component replacement) {
+		return component.replaceText(builder -> builder.matchLiteral(placeholder).replacement(replacement));
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
 	}
 
 }

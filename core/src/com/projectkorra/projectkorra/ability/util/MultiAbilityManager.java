@@ -8,7 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.projectkorra.projectkorra.OfflineBendingPlayer;
 import com.projectkorra.projectkorra.board.BendingBoardManager;
-import net.md_5.bungee.api.ChatColor;
+import com.projectkorra.projectkorra.util.ChatUtil;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
@@ -68,11 +71,12 @@ public class MultiAbilityManager {
 
 		bPlayer.getAbilities().clear();
 		for (int i = 0; i < modes.size(); i++) {
+			// Slots hold legacy strings, which the board and move preview parse back into components
+			Component slot = Component.text(modes.get(i).getName(), modes.get(i).getAbilityTextColor());
 			if (!player.hasPermission("bending.ability." + multiAbility + "." + modes.get(i).getName())) {
-				bPlayer.getAbilities().put(i + 1, new StringBuilder().append(modes.get(i).getAbilityColor()).append(ChatColor.STRIKETHROUGH).append(modes.get(i).getName()).toString());
-			} else {
-				bPlayer.getAbilities().put(i + 1, modes.get(i).getAbilityColor() + modes.get(i).getName());
+				slot = slot.decorate(TextDecoration.STRIKETHROUGH);
 			}
+			bPlayer.getAbilities().put(i + 1, ChatUtil.toLegacy(slot));
 		}
 		BendingBoardManager.updateAllSlots(player);
 		
@@ -244,17 +248,25 @@ public class MultiAbilityManager {
 	public static class MultiAbilityInfoSub {
 		private String name;
 		private Element element;
-		private ChatColor color;
+		private TextColor color;
 
 		public MultiAbilityInfoSub(final String name, final Element element) {
 			this.name = name;
 			this.element = element;
 		}
 
-		public MultiAbilityInfoSub(final String name, final Element element, final ChatColor color) {
+		public MultiAbilityInfoSub(final String name, final Element element, final TextColor color) {
 			this.name = name;
 			this.element = element;
 			this.color = color;
+		}
+
+		/**
+		 * @deprecated Use {@link #MultiAbilityInfoSub(String, Element, TextColor)}
+		 */
+		@Deprecated
+		public MultiAbilityInfoSub(final String name, final Element element, final net.md_5.bungee.api.ChatColor color) {
+			this(name, element, color == null ? null : ChatUtil.toTextColor(color));
 		}
 
 		public Element getElement() {
@@ -273,7 +285,21 @@ public class MultiAbilityManager {
 			this.name = name;
 		}
 
-		public ChatColor getAbilityColor() {
+		/**
+		 * @return The color of this mode, or null if it has no element
+		 */
+		public TextColor getAbilityTextColor() {
+			if (this.element == null) {
+				return null;
+			}
+			return this.color == null ? this.element.getTextColor() : this.color;
+		}
+
+		/**
+		 * @deprecated Use {@link #getAbilityTextColor()}
+		 */
+		@Deprecated
+		public net.md_5.bungee.api.ChatColor getAbilityColor() {
 			if (this.element == null){
 				return null;
 			}
@@ -281,7 +307,7 @@ public class MultiAbilityManager {
 			if (this.color == null){
 				return this.element.getColor();
 			}else{
-				return this.color;
+				return net.md_5.bungee.api.ChatColor.of(this.color.asHexString());
 			}
 		}
 	}

@@ -28,7 +28,6 @@ import com.projectkorra.projectkorra.ability.CoreAbility;
 import com.projectkorra.projectkorra.board.BendingBoardManager;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
 import com.projectkorra.projectkorra.storage.DBConnection;
-import net.md_5.bungee.api.ChatColor;
 import com.projectkorra.projectkorra.command.PresetCommand;
 import com.projectkorra.projectkorra.util.ChatUtil;
 
@@ -384,7 +383,7 @@ public class Preset {
 			}
 			String presetName = parts[0];
 			if (Preset.presetExists(player, presetName)) {
-				ChatUtil.sendBrandingMessage(player, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Preset.ImportExists"));
+				ChatUtil.sendBrandingMessage(player, "&c" + ConfigManager.languageConfig.get().getString("Commands.Preset.ImportExists"));
 				return null;
 			}
 			if (presetName.matches(PresetCommand.INVALID_NAME) || presetName.isEmpty()) {
@@ -404,7 +403,7 @@ public class Preset {
 						if (slot >= 1 && slot <= 9) {
 							final CoreAbility coreAbil = CoreAbility.getAbility(bindData[1]);
 							if (coreAbil == null || !coreAbil.isEnabled()) {
-								ChatUtil.sendBrandingMessage(player, org.bukkit.ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Preset.ImportAbilityNotFound").replace("{ability}", bindData[1]));
+								ChatUtil.sendBrandingMessage(player, "&c" + ConfigManager.languageConfig.get().getString("Commands.Preset.ImportAbilityNotFound").replace("{ability}", bindData[1]));
 								continue;
 							}
 							abilities.put(slot, bindData[1]);

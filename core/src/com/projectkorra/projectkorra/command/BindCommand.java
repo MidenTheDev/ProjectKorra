@@ -6,7 +6,9 @@ import java.util.Collections;
 import java.util.List;
 
 import com.projectkorra.projectkorra.util.ChatUtil;
-import org.bukkit.ChatColor;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -53,10 +55,10 @@ public class BindCommand extends PKCommand {
 
 		final CoreAbility coreAbil = CoreAbility.getAbility(args.get(0));
 		if (coreAbil == null || !coreAbil.isEnabled()) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.abilityDoesntExist.replace("{ability}", args.get(0)));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.abilityDoesntExist.replace("{ability}", args.get(0))).colorIfAbsent(NamedTextColor.RED));
 			return;
 		} else if (coreAbil instanceof PassiveAbility || coreAbil instanceof ComboAbility || coreAbil.isHiddenAbility()) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.unbindable.replace("{ability}", args.get(0)));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.unbindable.replace("{ability}", args.get(0))).colorIfAbsent(NamedTextColor.RED));
 			return;
 		}
 
@@ -70,7 +72,7 @@ public class BindCommand extends PKCommand {
 			try {
 				this.bind(sender, args.get(0), Integer.parseInt(args.get(1)));
 			} catch (final NumberFormatException ex) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.wrongNumber);
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.wrongNumber).colorIfAbsent(NamedTextColor.RED));
 			}
 		}
 	}
@@ -79,36 +81,41 @@ public class BindCommand extends PKCommand {
 		if (!(sender instanceof Player)) {
 			return;
 		} else if (slot < 1 || slot > 9) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.wrongNumber);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.wrongNumber).colorIfAbsent(NamedTextColor.RED));
 			return;
 		}
 
 		final BendingPlayer bPlayer = BendingPlayer.getBendingPlayer((Player) sender);
 		final CoreAbility coreAbil = CoreAbility.getAbility(ability);
 		if (bPlayer == null) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.loadingInfo);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.loadingInfo).colorIfAbsent(NamedTextColor.RED));
 			return;
 		} else if (coreAbil == null || !bPlayer.canBind(coreAbil)) {
 			if (coreAbil != null && coreAbil.getElement() != Element.AVATAR && !bPlayer.hasElement(coreAbil.getElement())) {
 				if (coreAbil.getElement() instanceof SubElement) {
 					final SubElement sub = (SubElement) coreAbil.getElement();
 					if (!bPlayer.hasElement(sub.getParentElement())) {
-						ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ("AEIOUaeiou".indexOf(sub.getParentElement().getName().charAt(0)) > -1 ? this.noElementAE : this.noElement).replace("{element}", sub.getParentElement().getName() + sub.getParentElement().getType().getBender()));
+						ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(("AEIOUaeiou".indexOf(sub.getParentElement().getName().charAt(0)) > -1 ? this.noElementAE : this.noElement).replace("{element}", sub.getParentElement().getName() + sub.getParentElement().getType().getBender())).colorIfAbsent(NamedTextColor.RED));
 					} else {
-						ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noSubElement.replace("{subelement}", coreAbil.getElement().getName() + coreAbil.getElement().getType().getBending()));
+						ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.noSubElement.replace("{subelement}", coreAbil.getElement().getName() + coreAbil.getElement().getType().getBending())).colorIfAbsent(NamedTextColor.RED));
 					}
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ("AEIOUaeiou".indexOf(coreAbil.getElement().getName().charAt(0)) > -1 ? this.noElementAE : this.noElement).replace("{element}", coreAbil.getElement().getName() + coreAbil.getElement().getType().getBender()));
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(("AEIOUaeiou".indexOf(coreAbil.getElement().getName().charAt(0)) > -1 ? this.noElementAE : this.noElement).replace("{element}", coreAbil.getElement().getName() + coreAbil.getElement().getType().getBender())).colorIfAbsent(NamedTextColor.RED));
 				}
 			} else {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + super.noPermissionMessage);
+				ChatUtil.sendBrandingMessage(sender, super.noPermissionMessage);
 			}
 			return;
 		} else if (!bPlayer.isElementToggled(coreAbil.getElement())) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.toggledElementOff);
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.toggledElementOff).colorIfAbsent(NamedTextColor.RED));
 		}
 
 		bPlayer.bindAbility(ability, slot);
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		node.then(this.word("ability").then(this.integer("slot", 1, 9)));
 	}
 
 	@Override

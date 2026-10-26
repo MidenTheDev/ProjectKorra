@@ -11,10 +11,12 @@ import com.projectkorra.projectkorra.event.PlayerCooldownChangeEvent;
 import com.projectkorra.projectkorra.util.ChatUtil;
 import com.projectkorra.projectkorra.util.Cooldown;
 import com.projectkorra.projectkorra.util.TimeUtil;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -25,6 +27,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -67,7 +70,7 @@ public class CooldownCommand extends PKCommand {
 
         this.getPlayer(list.get(1)).thenAccept(oPlayer -> {
             if (oPlayer == null || (!oPlayer.isOnline() && !oPlayer.hasPlayedBefore())) {
-                ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Cooldown.InvalidPlayer"));
+                ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Cooldown.InvalidPlayer")).colorIfAbsent(NamedTextColor.RED));
                 return;
             }
             _execute(sender, list, oPlayer);
@@ -85,16 +88,14 @@ public class CooldownCommand extends PKCommand {
                     return;
                 }
 
-                List<String> cooldowns = bPlayer.getCooldowns().entrySet().stream()
+                List<Map.Entry<String, Cooldown>> cooldowns = bPlayer.getCooldowns().entrySet().stream()
                         .sorted(Comparator.comparingLong(entry -> entry.getValue().getCooldown()))
                         .filter(entry -> entry.getValue().getCooldown() > 0)
-                        .map(entry -> ChatColor.YELLOW + entry.getKey() + ": " + ChatColor.RED +
-                                TimeUtil.formatTime(entry.getValue().getCooldown() - System.currentTimeMillis()))
                         .collect(Collectors.toList());
 
                 if (cooldowns.isEmpty()) {
                     String titleMessage = ConfigManager.languageConfig.get().getString("Commands.Cooldown.ViewNone").replace("{player}", oPlayer.getName());
-                    ChatUtil.sendBrandingMessage(sender, ChatColor.RED + titleMessage);
+                    ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(titleMessage).colorIfAbsent(NamedTextColor.RED));
                     return;
                 }
 
@@ -103,17 +104,16 @@ public class CooldownCommand extends PKCommand {
                     titleMessage = ConfigManager.languageConfig.get().getString("Commands.Cooldown.ViewMax");
                 }
                 titleMessage = titleMessage.replace("{player}", oPlayer.getName()).replace("{number}", Math.min(cooldowns.size(), 10) + "");
-                ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + titleMessage);
+                ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(titleMessage).colorIfAbsent(NamedTextColor.GREEN));
                 for (int i = 0; i < 10 && i < cooldowns.size(); i++) {
-                    String message = cooldowns.get(i);
-                    String cooldownName = ChatColor.stripColor(message).split(":")[0];
+                    String cooldownName = cooldowns.get(i).getKey();
+                    String remaining = TimeUtil.formatTime(cooldowns.get(i).getValue().getCooldown() - System.currentTimeMillis());
                     String showText = ConfigManager.languageConfig.get().getString("Commands.Cooldown.ResetPreview").replace("{cooldown}", cooldownName);
-                    HoverEvent hoverEvent = new HoverEvent(HoverEvent.Action.SHOW_TEXT, TextComponent.fromLegacyText(ChatColor.YELLOW + showText));
-                    ClickEvent clickEvent = new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/b cooldown reset " + oPlayer.getName() + " " + cooldownName);
-                    TextComponent textComponent = new TextComponent(message);
-                    textComponent.setClickEvent(clickEvent);
-                    textComponent.setHoverEvent(hoverEvent);
-                    sender.spigot().sendMessage(textComponent);
+                    sender.sendMessage(Component.text()
+                            .append(Component.text(cooldownName + ": ", NamedTextColor.YELLOW), Component.text(remaining, NamedTextColor.RED))
+                            .hoverEvent(HoverEvent.showText(ChatUtil.legacy(showText).colorIfAbsent(NamedTextColor.YELLOW)))
+                            .clickEvent(ClickEvent.suggestCommand("/b cooldown reset " + oPlayer.getName() + " " + cooldownName))
+                            .build());
                 }
                 return;
             }
@@ -136,7 +136,7 @@ public class CooldownCommand extends PKCommand {
                 try {
                     time = TimeUtil.unformatTime(list.get(3));
                 } catch (NumberFormatException e) {
-                    ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Cooldown.InvalidTime").replace("{value}", list.get(3)));
+                    ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Cooldown.InvalidTime").replace("{value}", list.get(3))).colorIfAbsent(NamedTextColor.RED));
                     return;
                 }
                 if (cooldown.equals("*") || cooldown.equalsIgnoreCase("ALL")) {
@@ -144,10 +144,10 @@ public class CooldownCommand extends PKCommand {
                         Set<String> cooldownKeys = new HashSet<>(bPlayer.getCooldowns().keySet()); //Clone the list to prevent concurrentmodifications
                         cooldownKeys.forEach(bPlayer::removeCooldown); //We do this instead of clear() because we need to call the event
                         bPlayer.saveCooldowns();
-                        ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Cooldown.ResetAll").replace("{player}", oPlayer.getName()));
+                        ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Cooldown.ResetAll").replace("{player}", oPlayer.getName())).colorIfAbsent(NamedTextColor.RED));
                         return;
                     }
-                    ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + ConfigManager.languageConfig.get().getString("Commands.Cooldown.SetAll").replace("{player}", oPlayer.getName()));
+                    ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Cooldown.SetAll").replace("{player}", oPlayer.getName())).colorIfAbsent(NamedTextColor.GREEN));
                     return;
                 }
 
@@ -158,12 +158,12 @@ public class CooldownCommand extends PKCommand {
 
                 String message = ConfigManager.languageConfig.get().getString("Commands.Cooldown.Set").replace("{player}",
                         oPlayer.getName()).replace("{cooldown}", fixedCooldown).replace("{value}", TimeUtil.formatTime(time));
-                ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + message);
+                ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(message).colorIfAbsent(NamedTextColor.GREEN));
             } else if (set) {
                 if (!this.hasPermission(sender, "set")) {
                     return;
                 }
-                ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Cooldown.SetNoValue"));
+                ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Cooldown.SetNoValue")).colorIfAbsent(NamedTextColor.RED));
             } else {
                 if (!this.hasPermission(sender, "reset")) {
                     return;
@@ -172,7 +172,7 @@ public class CooldownCommand extends PKCommand {
                     Set<String> cooldownKeys = new HashSet<>(bPlayer.getCooldowns().keySet()); //Clone the list to prevent concurrentmodifications
                     cooldownKeys.forEach(bPlayer::removeCooldown); //We do this instead of clear() because we need to call the event
                     bPlayer.saveCooldowns();
-                    ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + ConfigManager.languageConfig.get().getString("Commands.Cooldown.ResetAll").replace("{player}", oPlayer.getName()));
+                    ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Cooldown.ResetAll").replace("{player}", oPlayer.getName())).colorIfAbsent(NamedTextColor.GREEN));
                     return;
                 }
 
@@ -183,7 +183,7 @@ public class CooldownCommand extends PKCommand {
 
                 String message = ConfigManager.languageConfig.get().getString("Commands.Cooldown.Reset").replace("{player}",
                         oPlayer.getName()).replace("{cooldown}", fixedCooldown);
-                ChatUtil.sendBrandingMessage(sender, ChatColor.GREEN + message);
+                ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(message).colorIfAbsent(NamedTextColor.GREEN));
             }
         }).exceptionally(e -> {
             e.printStackTrace();
@@ -194,7 +194,7 @@ public class CooldownCommand extends PKCommand {
     private String setCooldown(CommandSender sender, OfflineBendingPlayer bPlayer, String cooldown, long time) {
         String fixedCooldown = COOLDOWNS.stream().filter(s -> s.equalsIgnoreCase(cooldown)).findFirst().orElse(null);
         if (fixedCooldown == null) {
-            ChatUtil.sendBrandingMessage(sender, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Cooldown.InvalidCooldown"));
+            ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Cooldown.InvalidCooldown")).colorIfAbsent(NamedTextColor.RED));
             return null;
         }
 
@@ -229,6 +229,14 @@ public class CooldownCommand extends PKCommand {
             return list;
         } else if (Arrays.asList(new String[] {"set", "s"}).contains(args.get(0))) return Lists.newArrayList("60s", "30m", "2h", "30d");
         return new ArrayList<>(0);
+    }
+
+    @Override
+    protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+        // The cooldown name can be "*", which a single word argument does not allow
+        this.literals(node, new String[] {"view", "v"}, view -> view.then(this.word("player")));
+        this.literals(node, new String[] {"set", "s"}, set -> set.then(this.word("player").then(this.greedy("cooldown"))));
+        this.literals(node, new String[] {"reset", "r"}, reset -> reset.then(this.word("player").then(this.greedy("cooldown"))));
     }
 
     public static void addCooldownType(String cooldown) {

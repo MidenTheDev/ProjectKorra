@@ -3,9 +3,13 @@ package com.projectkorra.projectkorra.command;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.projectkorra.projectkorra.util.ChatUtil;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -55,7 +59,7 @@ public class RemoveCommand extends PKCommand {
 			if (e == null) { //The first argument must be a playername instead
 				getPlayer(args.get(0)).thenAccept(player -> {
 					if (!player.isOnline() && !player.hasPlayedBefore()) { //Player not found
-						ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.playerNotFound);
+						ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.playerNotFound).colorIfAbsent(NamedTextColor.RED));
 						return;
 					}
 
@@ -66,11 +70,11 @@ public class RemoveCommand extends PKCommand {
 						if (bPlayer.getElements().size() == 0) {
 							//If they still have temp elements
 							if (bPlayer.hasTempElements()) {
-								ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noElementsTargetTemps.replace("{target}", player.getName()));
+								ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.noElementsTargetTemps.replace("{target}", player.getName())).colorIfAbsent(NamedTextColor.RED));
 							} else { //Tell them they have no elements
 								if (player != sender)
-									ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noElementsTarget.replace("{target}", player.getName()));
-								else ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noElements);
+									ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.noElementsTarget.replace("{target}", player.getName())).colorIfAbsent(NamedTextColor.RED));
+								else ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.noElements).colorIfAbsent(NamedTextColor.RED));
 							}
 							return;
 						}
@@ -81,11 +85,11 @@ public class RemoveCommand extends PKCommand {
 						bPlayer.saveSubElements();
 						if (online) ((BendingPlayer) bPlayer).removeUnusableAbilities();
 						if (!player.getName().equalsIgnoreCase(sender.getName())) {
-							ChatUtil.sendBrandingMessage(sender, ChatColor.YELLOW + this.succesfullyRemovedAllElementsTargetConfirm.replace("{target}", ChatColor.DARK_AQUA + player.getName() + ChatColor.YELLOW));
+							ChatUtil.sendBrandingMessage(sender, highlight(this.succesfullyRemovedAllElementsTargetConfirm, "{target}", player.getName(), NamedTextColor.YELLOW));
 						}
 
 						if (online) {
-							ChatUtil.sendBrandingMessage((Player) player, ChatColor.YELLOW + this.succesfullyRemovedAllElementsTarget.replace("{sender}", ChatColor.DARK_AQUA + sender.getName() + ChatColor.YELLOW));
+							ChatUtil.sendBrandingMessage((Player) player, highlight(this.succesfullyRemovedAllElementsTarget, "{sender}", sender.getName(), NamedTextColor.YELLOW));
 							Bukkit.getServer().getPluginManager().callEvent(new PlayerChangeElementEvent(sender, (Player) player, null, Result.REMOVE));
 						}
 					}).exceptionally(ex -> {
@@ -116,10 +120,10 @@ public class RemoveCommand extends PKCommand {
 						senderBPlayer.getSubElements().remove(e);
 						senderBPlayer.saveSubElements();
 						senderBPlayer.removeUnusableAbilities();
-						ChatUtil.sendBrandingMessage(sender, e.getColor() + this.succesfullyRemovedElementSelf.replace("{element}", e.toString() + e.getType().getBending()).replace("{sender}", ChatColor.DARK_AQUA + sender.getName() + e.getColor()));
+						ChatUtil.sendBrandingMessage(sender, highlight(this.succesfullyRemovedElementSelf.replace("{element}", e.toString() + e.getType().getBending()), "{sender}", sender.getName(), e.getTextColor()));
 						Bukkit.getServer().getPluginManager().callEvent(new PlayerChangeSubElementEvent(sender, player, (SubElement) e, com.projectkorra.projectkorra.event.PlayerChangeSubElementEvent.Result.REMOVE));
 					} else {
-						ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.wrongElementSelf);
+						ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.wrongElementSelf).colorIfAbsent(NamedTextColor.RED));
 					}
 					return;
 				}
@@ -145,11 +149,11 @@ public class RemoveCommand extends PKCommand {
 					senderBPlayer.saveSubElements();
 					senderBPlayer.removeUnusableAbilities();
 
-					ChatUtil.sendBrandingMessage(sender, e.getColor() + this.succesfullyRemovedElementSelf.replace("{element}", e.toString() + e.getType().getBending()));
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.succesfullyRemovedElementSelf.replace("{element}", e.toString() + e.getType().getBending())).colorIfAbsent(e.getTextColor()));
 					Bukkit.getServer().getPluginManager().callEvent(new PlayerChangeElementEvent(sender, (Player) sender, e, Result.REMOVE));
 					return;
 				} else {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.wrongElementSelf);
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.wrongElementSelf).colorIfAbsent(NamedTextColor.RED));
 				}
 			}
 			return;
@@ -158,20 +162,20 @@ public class RemoveCommand extends PKCommand {
 		//2 arguments
 		getPlayer(args.get(0)).thenAccept(player -> {
 			if (!player.isOnline() && !player.hasPlayedBefore()) { //Player not found
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.playerNotFound);
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.playerNotFound).colorIfAbsent(NamedTextColor.RED));
 				return;
 			}
 
 			Element element = Element.fromString(args.get(1));
 			if (element == null) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.invalidElement);
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.invalidElement).colorIfAbsent(NamedTextColor.RED));
 				return;
 			}
 
 			BendingPlayer.getOrLoadOfflineAsync(player).thenAccept(bPlayer -> {
 				boolean online = bPlayer instanceof BendingPlayer;
 				if (!bPlayer.hasElement(element)) {
-					ChatUtil.sendBrandingMessage(sender, ChatColor.DARK_RED + this.wrongElementTarget.replace("{target}", player.getName()));
+					ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(this.wrongElementTarget.replace("{target}", player.getName())).colorIfAbsent(NamedTextColor.DARK_RED));
 					return;
 				}
 
@@ -203,11 +207,11 @@ public class RemoveCommand extends PKCommand {
 					bPlayer.saveElements();
 					bPlayer.saveSubElements();
 				}
-				if (player != sender) ChatUtil.sendBrandingMessage(sender, element.getColor() + this.succesfullyRemovedElementTargetConfirm.replace("{element}", element.toString() + element.getType().getBending()).replace("{target}", ChatColor.DARK_AQUA + player.getName() + element.getColor()));
+				if (player != sender) ChatUtil.sendBrandingMessage(sender, highlight(this.succesfullyRemovedElementTargetConfirm.replace("{element}", element.toString() + element.getType().getBending()), "{target}", player.getName(), element.getTextColor()));
 
 				if (online) {
 					((BendingPlayer)bPlayer).removeUnusableAbilities();
-					ChatUtil.sendBrandingMessage((Player)player, element.getColor() + this.succesfullyRemovedElementTarget.replace("{element}", element.toString() + element.getType().getBending()).replace("{sender}", ChatColor.DARK_AQUA + sender.getName() + element.getColor()));
+					ChatUtil.sendBrandingMessage((Player)player, highlight(this.succesfullyRemovedElementTarget.replace("{element}", element.toString() + element.getType().getBending()), "{sender}", sender.getName(), element.getTextColor()));
 					Bukkit.getServer().getPluginManager().callEvent(new PlayerChangeElementEvent(sender, (Player) player, element, Result.REMOVE));
 				}
 			}).exceptionally(ex -> {
@@ -218,6 +222,18 @@ public class RemoveCommand extends PKCommand {
 			ex.printStackTrace();
 			return null;
 		});
+	}
+
+	/**
+	 * Parses a language message in the given color, with a placeholder replaced by a dark aqua name
+	 */
+	private static Component highlight(final String message, final String placeholder, final String name, final TextColor color) {
+		return ChatUtil.legacy(message).colorIfAbsent(color).replaceText(builder -> builder.matchLiteral(placeholder).replacement(Component.text(name, NamedTextColor.DARK_AQUA)));
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		node.then(this.word("player").then(this.word("element")));
 	}
 
 	@Override

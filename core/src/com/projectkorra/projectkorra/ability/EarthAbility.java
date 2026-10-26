@@ -8,7 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.block.BlockState;
 
 import com.projectkorra.projectkorra.region.RegionProtection;
+import com.projectkorra.projectkorra.util.ChatUtil;
 import org.bukkit.*;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
@@ -441,8 +444,19 @@ public abstract class EarthAbility extends ElementalAbility {
 		return PREVENT_PHYSICS;
 	}
 
-	public static ChatColor getSubChatColor() {
-		return ChatColor.valueOf(ConfigManager.getConfig().getString("Properties.Chat.Colors.EarthSub"));
+	/**
+	 * @deprecated Use {@link #getSubTextColor()}
+	 */
+	@Deprecated
+	public static org.bukkit.ChatColor getSubChatColor() {
+		return org.bukkit.ChatColor.valueOf(ConfigManager.getConfig().getString("Properties.Chat.Colors.EarthSub"));
+	}
+
+	/**
+	 * @return The chat color used for earth subelements
+	 */
+	public static TextColor getSubTextColor() {
+		return ChatUtil.parseColor(ConfigManager.getConfig().getString("Properties.Chat.Colors.EarthSub"), NamedTextColor.WHITE);
 	}
 
 	public static Block getTargetEarthBlock(final Player player, final int range) {
@@ -527,7 +541,7 @@ public abstract class EarthAbility extends ElementalAbility {
 			Sound sound = Sound.ENTITY_GHAST_SHOOT;
 
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Earth.EarthSound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Earth.EarthSound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Earth.EarthSound.Sound' is not valid.");
 			} finally {
@@ -544,7 +558,7 @@ public abstract class EarthAbility extends ElementalAbility {
 			Sound sound = Sound.ENTITY_IRON_GOLEM_HURT;
 
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Earth.MetalSound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Earth.MetalSound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Earth.MetalSound.Sound' is not valid.");
 			} finally {
@@ -561,7 +575,7 @@ public abstract class EarthAbility extends ElementalAbility {
 			Sound sound = Sound.BLOCK_MUD_PLACE;
 
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Earth.MudSound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Earth.MudSound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Earth.MudSound.Sound' is not valid.");
 			} finally {
@@ -578,7 +592,7 @@ public abstract class EarthAbility extends ElementalAbility {
 			Sound sound = Sound.BLOCK_SAND_BREAK;
 
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Earth.SandSound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Earth.SandSound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Earth.SandSound.Sound' is not valid.");
 			} finally {
@@ -595,7 +609,7 @@ public abstract class EarthAbility extends ElementalAbility {
 			Sound sound = Sound.BLOCK_LAVA_AMBIENT;
 
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Earth.LavaSound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Earth.LavaSound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Earth.LavaSound.Sound' is not valid.");
 			} finally {

@@ -103,11 +103,11 @@
       <version>1.0.1</version>
     </dependency>
     <!-- Minecraft Timings -->
-    <!-- Spigot API -->
+    <!-- Paper API -->
     <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot-api</artifactId>
-      <version>1.21.11-R0.2-SNAPSHOT</version>
+      <groupId>io.papermc.paper</groupId>
+      <artifactId>paper-api</artifactId>
+      <version>26.2.build.135-stable</version>
       <scope>provided</scope>
     </dependency>
     <!-- lang3 -->
@@ -189,6 +189,12 @@
       <artifactId>worldguard-bukkit</artifactId>
       <version>7.0.5-SNAPSHOT</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.spigotmc</groupId>
+          <artifactId>spigot-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- RedProtect -->
     <dependency>
@@ -254,8 +260,7 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
         <configuration>
-          <source>21</source>
-          <target>21</target>
+          <release>25</release>
         </configuration>
       </plugin>
       <plugin>
@@ -320,7 +325,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.6.0</version>
+        <version>3.6.2</version>
         <configuration>
           <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
           <filters>

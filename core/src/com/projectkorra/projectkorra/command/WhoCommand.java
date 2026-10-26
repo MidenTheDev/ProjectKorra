@@ -21,10 +21,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.projectkorra.projectkorra.OfflineBendingPlayer;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.projectkorra.projectkorra.util.ChatUtil;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.format.TextColor;
 import com.projectkorra.projectkorra.util.TimeUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -111,7 +113,7 @@ public class WhoCommand extends PKCommand {
 
 						final String[] staffEntry = unparsed.split("/");
 						if (staffEntry.length >= 2) {
-							updatedstaff.put(staffEntry[0], ChatColor.translateAlternateColorCodes('&', staffEntry[1]));
+							updatedstaff.put(staffEntry[0], ChatUtil.color(staffEntry[1]));
 						}
 					}
 					in.close();
@@ -149,9 +151,9 @@ public class WhoCommand extends PKCommand {
 
 				for (final Element element : bp.getElements()) {
 					if (result == "") {
-						result = ChatColor.WHITE + playerName + " - " + (((!bp.isElementToggled(element) || !bp.isToggled()) ? element.getColor() + "" + ChatColor.STRIKETHROUGH : element.getColor()) + element.getName().substring(0, 1));
+						result = "&f" + playerName + " - " + (((!bp.isElementToggled(element) || !bp.isToggled()) ? code(element.getTextColor()) + "" + "&m" : code(element.getTextColor())) + element.getName().substring(0, 1));
 					} else {
-						result = result + ChatColor.WHITE + " | " + (((!bp.isElementToggled(element) || !bp.isToggled()) ? element.getColor() + "" + ChatColor.STRIKETHROUGH : element.getColor()) + element.getName().substring(0, 1));
+						result = result + "&f" + " | " + (((!bp.isElementToggled(element) || !bp.isToggled()) ? code(element.getTextColor()) + "" + "&m" : code(element.getTextColor())) + element.getName().substring(0, 1));
 					}
 				}
 				Set<Element> tempElements = new HashSet<>(bp.getTempElements().keySet());
@@ -163,34 +165,34 @@ public class WhoCommand extends PKCommand {
 
 				for (Element element : tempElements) {
 					if (result == "") {
-						result = ChatColor.WHITE + playerName + " - " + (((!bp.isElementToggled(element) || !bp.isToggled()) ? element.getColor() + "" + ChatColor.STRIKETHROUGH : element.getColor()) + element.getName().substring(0, 1) + ChatColor.WHITE + "*");
+						result = "&f" + playerName + " - " + (((!bp.isElementToggled(element) || !bp.isToggled()) ? code(element.getTextColor()) + "" + "&m" : code(element.getTextColor())) + element.getName().substring(0, 1) + "&f" + "*");
 					} else {
-						result = result + ChatColor.WHITE + " | " + (((!bp.isElementToggled(element) || !bp.isToggled()) ? element.getColor() + "" + ChatColor.STRIKETHROUGH : element.getColor()) + element.getName().substring(0, 1) + ChatColor.WHITE + "*");
+						result = result + "&f" + " | " + (((!bp.isElementToggled(element) || !bp.isToggled()) ? code(element.getTextColor()) + "" + "&m" : code(element.getTextColor())) + element.getName().substring(0, 1) + "&f" + "*");
 					}
 				}
 				if (this.staff.containsKey(player.getUniqueId().toString())) {
 					if (result == "") {
-						result = ChatColor.WHITE + playerName + " | " + this.staff.get(player.getUniqueId().toString());
+						result = "&f" + playerName + " | " + this.staff.get(player.getUniqueId().toString());
 					} else {
-						result = result + ChatColor.WHITE + " | " + this.staff.get(player.getUniqueId().toString());
+						result = result + "&f" + " | " + this.staff.get(player.getUniqueId().toString());
 					}
 				}
 				if (result == "") {
-					result = ChatColor.WHITE + playerName;
+					result = "&f" + playerName;
 				}
 				players.add(result);
 			}
 			if (players.isEmpty()) {
-				ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.noPlayersOnline);
+				ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.noPlayersOnline));
 			} else {
 				boolean firstMessage = true;
 
-				for (final String s : this.getPage(players, ChatColor.GOLD + "Players:", page, true)) {
+				for (final String s : this.getPage(players, "&6" + "Players:", page, true)) {
 					if (firstMessage) {
-						ChatUtil.sendBrandingMessage(sender, s);
+						ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy(s));
 						firstMessage = false;
 					} else {
-						sender.sendMessage(s);
+						sender.sendMessage(ChatUtil.legacy(s));
 					}
 				}
 			}
@@ -205,14 +207,14 @@ public class WhoCommand extends PKCommand {
 	 */
 	private void whoPlayer(final CommandSender sender, OfflinePlayer player) {
 		if (!player.isOnline() && !player.hasPlayedBefore()) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.playerUnknown.replace("{target}", player.getName()));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.playerUnknown.replace("{target}", player.getName())));
 			return;
 		}
 
 		//If they are actually offline OR they are vanished
 		boolean offline = !player.isOnline() || (sender instanceof Player && player instanceof Player && !((Player) sender).canSee((Player) player));
 		if (offline) {
-			ChatUtil.sendBrandingMessage(sender, ChatColor.RED + this.playerOffline.replace("{target}", player.getName()));
+			ChatUtil.sendBrandingMessage(sender, ChatUtil.legacy("&c" + this.playerOffline.replace("{target}", player.getName())));
 		}
 
 		BendingPlayer.getOrLoadOfflineAsync(player).thenAccept(bPlayer -> {
@@ -221,124 +223,124 @@ public class WhoCommand extends PKCommand {
 					bPlayer.uncacheAfter(30_000);
 				}
 
-				sender.sendMessage(player.getName() + (offline ? ChatColor.RESET + " (Offline)" : ""));
+				sender.sendMessage(ChatUtil.legacy(player.getName() + (offline ? "&r" + " (Offline)" : "")));
 				if (bPlayer.hasElement(Element.AIR)) {
 					if (bPlayer.isElementToggled(Element.AIR)) {
-						sender.sendMessage(Element.AIR.getColor() + "- Airbender" + this.getTime(Element.AIR, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.AIR.getTextColor()) + "- Airbender" + this.getTime(Element.AIR, bPlayer)));
 					} else {
-						sender.sendMessage(Element.AIR.getColor() + "" + ChatColor.STRIKETHROUGH + "- Airbender" + this.getTime(Element.AIR, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.AIR.getTextColor()) + "" + "&m" + "- Airbender" + this.getTime(Element.AIR, bPlayer)));
 					}
 
 					if (bPlayer.canUseFlight()) {
-						sender.sendMessage(Element.FLIGHT.getColor() + this.canFly + this.getTime(Element.FLIGHT, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.FLIGHT.getTextColor()) + this.canFly + this.getTime(Element.FLIGHT, bPlayer)));
 					}
 					if (bPlayer.canUseSpiritualProjection()) {
-						sender.sendMessage(Element.SPIRITUAL.getColor() + this.canUseSpiritualProjection + this.getTime(Element.SPIRITUAL, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.SPIRITUAL.getTextColor()) + this.canUseSpiritualProjection + this.getTime(Element.SPIRITUAL, bPlayer)));
 					}
 					for (final SubElement se : Element.getAddonSubElements(Element.AIR)) {
 						if (bPlayer.canUseSubElement(se)) {
-							sender.sendMessage(se.getColor() + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer));
+							sender.sendMessage(ChatUtil.legacy(code(se.getTextColor()) + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer)));
 						}
 					}
 				}
 
 				if (bPlayer.hasElement(Element.WATER)) {
 					if (bPlayer.isElementToggled(Element.WATER)) {
-						sender.sendMessage(Element.WATER.getColor() + "- Waterbender" + this.getTime(Element.WATER, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.WATER.getTextColor()) + "- Waterbender" + this.getTime(Element.WATER, bPlayer)));
 					} else {
-						sender.sendMessage(Element.WATER.getColor() + "" + ChatColor.STRIKETHROUGH + "- Waterbender" + this.getTime(Element.WATER, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.WATER.getTextColor()) + "" + "&m" + "- Waterbender" + this.getTime(Element.WATER, bPlayer)));
 					}
 
 					if (bPlayer.canPlantbend()) {
-						sender.sendMessage(Element.PLANT.getColor() + this.canPlantbend + this.getTime(Element.PLANT, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.PLANT.getTextColor()) + this.canPlantbend + this.getTime(Element.PLANT, bPlayer)));
 					}
 					if (bPlayer.canBloodbend()) {
 						if (bPlayer.canBloodbendAtAnytime()) {
-							sender.sendMessage(Element.BLOOD.getColor() + this.canBloodbendAnytime + this.getTime(Element.BLOOD, bPlayer));
+							sender.sendMessage(ChatUtil.legacy(code(Element.BLOOD.getTextColor()) + this.canBloodbendAnytime + this.getTime(Element.BLOOD, bPlayer)));
 						} else {
-							sender.sendMessage(Element.BLOOD.getColor() + this.canBloodbend + this.getTime(Element.BLOOD, bPlayer));
+							sender.sendMessage(ChatUtil.legacy(code(Element.BLOOD.getTextColor()) + this.canBloodbend + this.getTime(Element.BLOOD, bPlayer)));
 						}
 					}
 					if (bPlayer.canIcebend()) {
-						sender.sendMessage(Element.ICE.getColor() + this.canIcebend + this.getTime(Element.ICE, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.ICE.getTextColor()) + this.canIcebend + this.getTime(Element.ICE, bPlayer)));
 					}
 					if (bPlayer.canWaterHeal()) {
-						sender.sendMessage(Element.HEALING.getColor() + this.canHeal + this.getTime(Element.HEALING, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.HEALING.getTextColor()) + this.canHeal + this.getTime(Element.HEALING, bPlayer)));
 					}
 					for (final SubElement se : Element.getAddonSubElements(Element.WATER)) {
 						if (bPlayer.canUseSubElement(se)) {
-							sender.sendMessage(se.getColor() + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer));
+							sender.sendMessage(ChatUtil.legacy(code(se.getTextColor()) + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer)));
 						}
 					}
 				}
 
 				if (bPlayer.hasElement(Element.EARTH)) {
 					if (bPlayer.isElementToggled(Element.EARTH)) {
-						sender.sendMessage(Element.EARTH.getColor() + "- Earthbender" + this.getTime(Element.EARTH, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.EARTH.getTextColor()) + "- Earthbender" + this.getTime(Element.EARTH, bPlayer)));
 					} else {
-						sender.sendMessage(Element.EARTH.getColor() + "" + ChatColor.STRIKETHROUGH + "- Earthbender" + this.getTime(Element.EARTH, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.EARTH.getTextColor()) + "" + "&m" + "- Earthbender" + this.getTime(Element.EARTH, bPlayer)));
 					}
 
 					if (bPlayer.canMetalbend()) {
-						sender.sendMessage(Element.METAL.getColor() + this.canMetalbend + this.getTime(Element.METAL, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.METAL.getTextColor()) + this.canMetalbend + this.getTime(Element.METAL, bPlayer)));
 					}
 					if (bPlayer.canLavabend()) {
-						sender.sendMessage(Element.LAVA.getColor() + this.canLavabend + this.getTime(Element.LAVA, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.LAVA.getTextColor()) + this.canLavabend + this.getTime(Element.LAVA, bPlayer)));
 					}
 					if (bPlayer.canSandbend()) {
-						sender.sendMessage(Element.SAND.getColor() +this.canSandbend + this.getTime(Element.SAND, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.SAND.getTextColor()) +this.canSandbend + this.getTime(Element.SAND, bPlayer)));
 					}
 					for (final SubElement se : Element.getAddonSubElements(Element.EARTH)) {
 						if (bPlayer.canUseSubElement(se)) {
-							sender.sendMessage(se.getColor() + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer));
+							sender.sendMessage(ChatUtil.legacy(code(se.getTextColor()) + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer)));
 						}
 					}
 				}
 
 				if (bPlayer.hasElement(Element.FIRE)) {
 					if (bPlayer.isElementToggled(Element.FIRE)) {
-						sender.sendMessage(Element.FIRE.getColor() + "- Firebender" + this.getTime(Element.FIRE, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.FIRE.getTextColor()) + "- Firebender" + this.getTime(Element.FIRE, bPlayer)));
 					} else {
-						sender.sendMessage(Element.FIRE.getColor() + "" + ChatColor.STRIKETHROUGH + "- Firebender" + this.getTime(Element.FIRE, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.FIRE.getTextColor()) + "" + "&m" + "- Firebender" + this.getTime(Element.FIRE, bPlayer)));
 					}
 
 					if (bPlayer.canCombustionbend()) {
-						sender.sendMessage(Element.COMBUSTION.getColor() + this.canCombustionbend + this.getTime(Element.COMBUSTION, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.COMBUSTION.getTextColor()) + this.canCombustionbend + this.getTime(Element.COMBUSTION, bPlayer)));
 					}
 					if (bPlayer.canLightningbend()) {
-						sender.sendMessage(Element.LIGHTNING.getColor() + this.canLightningbend + this.getTime(Element.LIGHTNING, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.LIGHTNING.getTextColor()) + this.canLightningbend + this.getTime(Element.LIGHTNING, bPlayer)));
 					}
 					if (bPlayer.hasSubElement(Element.BLUE_FIRE)) {
-						sender.sendMessage(Element.BLUE_FIRE.getColor() + this.canUseBlueFire + this.getTime(Element.BLUE_FIRE, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.BLUE_FIRE.getTextColor()) + this.canUseBlueFire + this.getTime(Element.BLUE_FIRE, bPlayer)));
 					}
 					for (final SubElement se : Element.getAddonSubElements(Element.FIRE)) {
 						if (bPlayer.canUseSubElement(se)) {
-							sender.sendMessage(se.getColor() + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer));
+							sender.sendMessage(ChatUtil.legacy(code(se.getTextColor()) + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer)));
 						}
 					}
 				}
 
 				if (bPlayer.hasElement(Element.CHI)) {
 					if (bPlayer.isElementToggled(Element.CHI)) {
-						sender.sendMessage(Element.CHI.getColor() + "- Chiblocker" + this.getTime(Element.CHI, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.CHI.getTextColor()) + "- Chiblocker" + this.getTime(Element.CHI, bPlayer)));
 					} else {
-						sender.sendMessage(Element.CHI.getColor() + "" + ChatColor.STRIKETHROUGH + "- Chiblocker" + this.getTime(Element.CHI, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(Element.CHI.getTextColor()) + "" + "&m" + "- Chiblocker" + this.getTime(Element.CHI, bPlayer)));
 					}
 
 					for (final SubElement se : Element.getAddonSubElements(Element.CHI)) {
 						if (bPlayer.canUseSubElement(se)) {
-							sender.sendMessage(se.getColor() + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer));
+							sender.sendMessage(ChatUtil.legacy(code(se.getTextColor()) + "    Can " + (!se.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + se.getName() + se.getType().getBend() + this.getTime(se, bPlayer)));
 						}
 					}
 				}
 
 				for (final Element element : Element.getAddonElements()) {
 					if (bPlayer.hasElement(element)) {
-						sender.sendMessage(element.getColor() + "" + (bPlayer.isElementToggled(element) ? "" : ChatColor.STRIKETHROUGH) + "- " + element.getName() + (element.getType() != null ? element.getType().getBender() : "") + this.getTime(element, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(element.getTextColor()) + "" + (bPlayer.isElementToggled(element) ? "" : "&m") + "- " + element.getName() + (element.getType() != null ? element.getType().getBender() : "") + this.getTime(element, bPlayer)));
 
 						for (final SubElement subelement : Element.getSubElements(element)) {
 							if (bPlayer.canUseSubElement(subelement)) {
-								sender.sendMessage(subelement.getColor() + "    Can " + (!subelement.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + subelement.getName() + subelement.getType().getBend() + this.getTime(element, bPlayer));
+								sender.sendMessage(ChatUtil.legacy(code(subelement.getTextColor()) + "    Can " + (!subelement.getType().equals(ElementType.NO_SUFFIX) ? "" : "use ") + subelement.getName() + subelement.getType().getBend() + this.getTime(element, bPlayer)));
 							}
 						}
 					}
@@ -351,25 +353,25 @@ public class WhoCommand extends PKCommand {
 						.collect(Collectors.toSet());
 
 				if (!blockedSubs.isEmpty()) {
-					sender.sendMessage(ChatColor.DARK_GRAY + this.subelementsWithoutParentElements);
+					sender.sendMessage(ChatUtil.legacy("&8" + this.subelementsWithoutParentElements));
 					for (SubElement sub : blockedSubs) {
-						sender.sendMessage(sub.getColor() + " - " + sub.getName() + this.getTime(sub, bPlayer));
+						sender.sendMessage(ChatUtil.legacy(code(sub.getTextColor()) + " - " + sub.getName() + this.getTime(sub, bPlayer)));
 					}
 				}
 
 				final UUID uuid = player.getUniqueId();
 
-				sender.sendMessage("Abilities: ");
+				sender.sendMessage(ChatUtil.legacy("Abilities: "));
 				for (int i = 1; i <= 9; i++) {
 					final String ability = bPlayer.getAbilities().get(i);
 					final CoreAbility coreAbil = CoreAbility.getAbility(ability);
 					if (coreAbil == null) continue;
 
-					sender.sendMessage(i + " - " + coreAbil.getElement().getColor() + ability);
+					sender.sendMessage(ChatUtil.legacy(i + " - " + code(coreAbil.getElement().getTextColor()) + ability));
 				}
 
 				if (this.staff.containsKey(uuid.toString())) {
-					sender.sendMessage(this.staff.get(uuid.toString()));
+					sender.sendMessage(ChatUtil.legacy(this.staff.get(uuid.toString())));
 				}
 			}, 1L);
 		}).exceptionally(e -> {
@@ -392,7 +394,7 @@ public class WhoCommand extends PKCommand {
 		if (element.isAvatarElement() && bPlayer.hasTempElement(Element.AVATAR)) {
 			long time = bPlayer.getTempElements().get(Element.AVATAR) - System.currentTimeMillis();
 			String timeString = TimeUtil.formatTime(time);
-			return " " + ChatColor.DARK_GRAY + "(" + timeString + ")";
+			return " " + "&8" + "(" + timeString + ")";
 		}
 
 		if (element instanceof SubElement) {
@@ -400,13 +402,25 @@ public class WhoCommand extends PKCommand {
 			if (time == -1L) return ""; //The subelement is linked to the parent element, so don't bother adding a time
 
 			String timeString = TimeUtil.formatTime(time - System.currentTimeMillis());
-			return " " + ChatColor.DARK_GRAY + "(" + timeString + ")";
+			return " " + "&8" + "(" + timeString + ")";
 		}
 
 		long time = bPlayer.getTempElements().get(element) - System.currentTimeMillis();
 		String timeString = TimeUtil.formatTime(time);
 
-		return " " + ChatColor.DARK_GRAY + "(" + timeString + ")";
+		return " " + "&8" + "(" + timeString + ")";
+	}
+
+	/**
+	 * @return A legacy color code for the color, so it carries on until the next color code like the old ChatColor strings did
+	 */
+	private static String code(final TextColor color) {
+		return "&" + color.asHexString();
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
+		node.then(this.word("target"));
 	}
 
 	@Override

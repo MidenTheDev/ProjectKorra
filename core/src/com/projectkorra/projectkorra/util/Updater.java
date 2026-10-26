@@ -79,8 +79,8 @@ public class Updater {
 				this.checkUpdate();
 			});
 		}
-		this.currentVersion = plugin.getDescription().getVersion();
-		this.pluginName = plugin.getDescription().getName();
+		this.currentVersion = plugin.getPluginMeta().getVersion();
+		this.pluginName = plugin.getPluginMeta().getName();
 	}
 
 	private void runAsync(final Plugin plugin, final Runnable run) {

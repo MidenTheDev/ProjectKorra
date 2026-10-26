@@ -8,7 +8,10 @@ import com.projectkorra.projectkorra.ability.util.Collision;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
 import com.projectkorra.projectkorra.util.LightManager;
 import com.projectkorra.projectkorra.util.TempBlock;
+import com.projectkorra.projectkorra.util.ChatUtil;
 import org.bukkit.*;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
@@ -117,8 +120,19 @@ public abstract class FireAbility extends ElementalAbility {
 		return getDayFactor(1, world);
 	}
 
-	public static ChatColor getSubChatColor() {
-		return ChatColor.valueOf(ConfigManager.getConfig().getString("Properties.Chat.Colors.FireSub"));
+	/**
+	 * @deprecated Use {@link #getSubTextColor()}
+	 */
+	@Deprecated
+	public static org.bukkit.ChatColor getSubChatColor() {
+		return org.bukkit.ChatColor.valueOf(ConfigManager.getConfig().getString("Properties.Chat.Colors.FireSub"));
+	}
+
+	/**
+	 * @return The chat color used for fire subelements
+	 */
+	public static TextColor getSubTextColor() {
+		return ChatUtil.parseColor(ConfigManager.getConfig().getString("Properties.Chat.Colors.FireSub"), NamedTextColor.WHITE);
 	}
 
 	/**
@@ -229,7 +243,7 @@ public abstract class FireAbility extends ElementalAbility {
 
 			Sound sound = Sound.ENTITY_FIREWORK_ROCKET_BLAST;
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Fire.CombustionSound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Fire.CombustionSound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Fire.CombustionSound.Sound' is not valid.");
 			} finally {
@@ -285,7 +299,7 @@ public abstract class FireAbility extends ElementalAbility {
 
 			Sound sound = Sound.BLOCK_FIRE_AMBIENT;
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Fire.FireSound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Fire.FireSound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Fire.FireSound.Sound' is not valid.");
 			} finally {
@@ -309,7 +323,7 @@ public abstract class FireAbility extends ElementalAbility {
 
 			Sound sound = Sound.ENTITY_CREEPER_HURT;
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Fire.LightningSound.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Fire.LightningSound.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Fire.LightningSound.Sound' is not valid.");
 			} finally {
@@ -325,7 +339,7 @@ public abstract class FireAbility extends ElementalAbility {
 
 			Sound sound = Sound.BLOCK_BEEHIVE_WORK;
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Fire.LightningCharge.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Fire.LightningCharge.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Fire.LightningCharge.Sound' is not valid.");
 			} finally {
@@ -341,7 +355,7 @@ public abstract class FireAbility extends ElementalAbility {
 
 			Sound sound = Sound.ENTITY_LIGHTNING_BOLT_THUNDER;
 			try {
-				sound = Sound.valueOf(getConfig().getString("Properties.Fire.LightningHit.Sound"));
+				sound = GeneralMethods.getSound(getConfig().getString("Properties.Fire.LightningHit.Sound"));
 			} catch (final IllegalArgumentException exception) {
 				ProjectKorra.log.warning("Your current value for 'Properties.Fire.LightningHit.Sound' is not valid.");
 			} finally {

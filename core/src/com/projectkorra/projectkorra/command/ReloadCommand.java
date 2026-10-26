@@ -2,11 +2,14 @@ package com.projectkorra.projectkorra.command;
 
 import java.util.List;
 
-import org.bukkit.ChatColor;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
 
 import com.projectkorra.projectkorra.GeneralMethods;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
+import com.projectkorra.projectkorra.util.ChatUtil;
 
 /**
  * Executor for /bending reload. Extends {@link PKCommand}.
@@ -23,7 +26,11 @@ public class ReloadCommand extends PKCommand {
 			return;
 		}
 		GeneralMethods.reloadPlugin(sender);
-		sender.sendMessage(ChatColor.AQUA + ConfigManager.languageConfig.get().getString("Commands.Reload.SuccessfullyReloaded"));
+		sender.sendMessage(ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Reload.SuccessfullyReloaded")).colorIfAbsent(NamedTextColor.AQUA));
+	}
+
+	@Override
+	protected void buildArguments(final LiteralArgumentBuilder<CommandSourceStack> node) {
 	}
 
 }

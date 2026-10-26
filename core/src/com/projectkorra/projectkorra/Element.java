@@ -11,6 +11,8 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.projectkorra.projectkorra.util.ChatUtil;
 import com.projectkorra.projectkorra.util.Experimental;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
@@ -126,6 +128,32 @@ public class Element {
 		return getColor() + ChatUtil.color(ConfigManager.languageConfig.get().getString("Chat.Prefixes." + configKey, this.name)) + " ";
 	}
 
+	/**
+	 * @return The element's chat prefix as a Component, colored in the element's color
+	 */
+	public Component getPrefixComponent() {
+		return ChatUtil.legacy(this.getPrefix());
+	}
+
+	/**
+	 * @return The element's color
+	 */
+	public TextColor getTextColor() {
+		return ChatUtil.toTextColor(this.getColor());
+	}
+
+	/**
+	 * @return The color used for this element's subelements
+	 */
+	public TextColor getSubTextColor() {
+		return ChatUtil.toTextColor(this.getSubColor());
+	}
+
+	/**
+	 * @return The element's color, for building legacy strings
+	 * @deprecated Use {@link #getTextColor()} with Adventure components
+	 */
+	@Deprecated
 	public ChatColor getColor() {
 		if (this.color == null) {
 			FileConfiguration config = this.plugin == ProjectKorra.plugin ? ConfigManager.languageConfig.get() : this.plugin.getConfig();
@@ -149,6 +177,11 @@ public class Element {
 		return this.color != null ? this.color : ChatColor.WHITE;
 	}
 
+	/**
+	 * @return The color used for this element's subelements, for building legacy strings
+	 * @deprecated Use {@link #getSubTextColor()} with Adventure components
+	 */
+	@Deprecated
 	public ChatColor getSubColor() {
 		if (this.subColor != null) {
 			return this.subColor;

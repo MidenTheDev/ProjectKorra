@@ -5,7 +5,6 @@ import static java.util.stream.Collectors.joining;
 import com.projectkorra.projectkorra.configuration.ConfigManager;
 import com.projectkorra.projectkorra.util.TimeUtil;
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -27,6 +26,7 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation") // Element#getColor is used on purpose, placeholders return legacy strings
 	public String onPlaceholderRequest(final Player player, final String params) {
 		final BendingPlayer bPlayer = BendingPlayer.getBendingPlayer(player);
 		if (bPlayer == null) {
@@ -46,21 +46,21 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
 			return coreAbil.getElement().getColor() + coreAbil.getName();
 		} else if (params.equals("element") || params.equals("elementcolor") || params.equals("element_title") || params.equals("element_prefix")) {
 			String e = "Nonbender";
-			ChatColor c = ChatColor.WHITE;
+			String c = "\u00A7f"; // Placeholders return legacy strings
 			String title = ConfigManager.languageConfig.get().getString("Chat.Prefixes.Nonbender", c + "[Nonbender]");
 			if (player.hasPermission("bending.avatar") || (bPlayer.hasElement(Element.AIR) && bPlayer.hasElement(Element.EARTH) && bPlayer.hasElement(Element.FIRE) && bPlayer.hasElement(Element.WATER))) {
-				c = Element.AVATAR.getColor();
+				c = Element.AVATAR.getColor().toString();
 				e = Element.AVATAR.getName();
 				title = ConfigManager.languageConfig.get().getString("Chat.Prefixes.Avatar", c + "[Avatar]");
 			} else if (bPlayer.getElements().size() > 0) {
-				c = bPlayer.getElements().get(0).getColor();
+				c = bPlayer.getElements().get(0).getColor().toString();
 				e = bPlayer.getElements().get(0).getName();
 				title = ConfigManager.languageConfig.get().getString("Chat.Prefixes." + e, c + "[" + e + "]");
 			}
 			if (params.equals("element")) {
 				return e;
 			} else if (params.equals("elementcolor")) {
-				return c.toString();
+				return c;
 			} else {
 				return title;
 			}
@@ -103,7 +103,7 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
 
 	@Override
 	public String getAuthor() {
-		return this.plugin.getDescription().getAuthors().toString();
+		return this.plugin.getPluginMeta().getAuthors().toString();
 	}
 
 	@Override
@@ -113,7 +113,7 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
 
 	@Override
 	public String getVersion() {
-		return this.plugin.getDescription().getVersion();
+		return this.plugin.getPluginMeta().getVersion();
 	}
 
 	@Override

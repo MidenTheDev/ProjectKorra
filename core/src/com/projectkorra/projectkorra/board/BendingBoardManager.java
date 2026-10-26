@@ -26,7 +26,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 
 /**
  * Manages every individual {@link BendingBoard}
@@ -36,7 +37,7 @@ public final class BendingBoardManager {
 	private BendingBoardManager() {}
 	
 	private static final Set<String> disabledWorlds = new HashSet<>();
-	private static final Map<String, ChatColor> trackedCooldowns = new ConcurrentHashMap<>();
+	private static final Map<String, TextColor> trackedCooldowns = new ConcurrentHashMap<>();
 	private static final Set<UUID> disabledPlayers = Collections.synchronizedSet(new HashSet<>());
 	private static final Map<Player, BendingBoard> scoreboardPlayers = new ConcurrentHashMap<>();
 
@@ -65,12 +66,12 @@ public final class BendingBoardManager {
 		if (ConfigManager.languageConfig.get().contains("Board.Extras")) {
 			ConfigurationSection section = ConfigManager.languageConfig.get().getConfigurationSection("Board.Extras");
 			for (String key : section.getKeys(false)) {
-				try {
-					trackedCooldowns.put(key, ChatColor.of(section.getString(key)));
-				} catch (Exception e) {
+				TextColor color = ChatUtil.parseColor(section.getString(key), null);
+				if (color == null) {
 					ProjectKorra.plugin.getLogger().warning("Couldn't parse color from 'Board.Extras." + key + "', using white.");
-					trackedCooldowns.put(key, ChatColor.WHITE);
+					color = NamedTextColor.WHITE;
 				}
+				trackedCooldowns.put(key, color);
 			}
 		}
 	}
@@ -95,7 +96,7 @@ public final class BendingBoardManager {
 	 */
 	public static void toggleBoard(Player player, boolean force) {
 		if (!force && (!enabled || disabledWorlds.contains(player.getWorld().getName()))) {
-			ChatUtil.sendBrandingMessage(player, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Board.Disabled"));
+			ChatUtil.sendBrandingMessage(player, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Board.Disabled")).colorIfAbsent(NamedTextColor.RED));
 			return;
 		}
 
@@ -103,11 +104,11 @@ public final class BendingBoardManager {
 			scoreboardPlayers.get(player).hide();
 			disabledPlayers.add(player.getUniqueId());
 			scoreboardPlayers.remove(player);
-			ChatUtil.sendBrandingMessage(player, ChatColor.RED + ConfigManager.languageConfig.get().getString("Commands.Board.ToggledOff"));
+			ChatUtil.sendBrandingMessage(player, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Board.ToggledOff")).colorIfAbsent(NamedTextColor.RED));
 		} else {
 			disabledPlayers.remove(player.getUniqueId());
 			getBoard(player).ifPresent(BendingBoard::show);
-			ChatUtil.sendBrandingMessage(player, ChatColor.GREEN + ConfigManager.languageConfig.get().getString("Commands.Board.ToggledOn"));
+			ChatUtil.sendBrandingMessage(player, ChatUtil.legacy(ConfigManager.languageConfig.get().getString("Commands.Board.ToggledOn")).colorIfAbsent(NamedTextColor.GREEN));
 		}
 	}
 
@@ -174,7 +175,7 @@ public final class BendingBoardManager {
 			
 			CoreAbility coreAbility = CoreAbility.getAbility(name);
 			if (coreAbility instanceof ComboAbility) {
-				scoreboardPlayers.get(player).updateMisc(name, coreAbility.getElement().getColor(), forceCooldown);
+				scoreboardPlayers.get(player).updateMisc(name, coreAbility.getElement().getTextColor(), forceCooldown);
 			} else if (coreAbility == null && trackedCooldowns.containsKey(name)) {
 				scoreboardPlayers.get(player).updateMisc(name, trackedCooldowns.get(name), forceCooldown);
 			} else if (coreAbility != null && slot > 0) {
@@ -201,8 +202,16 @@ public final class BendingBoardManager {
 	 * @param cooldownName the internal cooldown name
 	 * @param color the color to use when rendering the board entry
 	 */
-	public static void addCooldownToTrack(String cooldownName, ChatColor color) {
+	public static void addCooldownToTrack(String cooldownName, TextColor color) {
 		trackedCooldowns.put(cooldownName, color);
+	}
+
+	/**
+	 * @deprecated Use {@link #addCooldownToTrack(String, TextColor)}
+	 */
+	@Deprecated
+	public static void addCooldownToTrack(String cooldownName, net.md_5.bungee.api.ChatColor color) {
+		addCooldownToTrack(cooldownName, ChatUtil.toTextColor(color));
 	}
 
 	/**
